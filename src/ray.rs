@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use vec3::Vec3;
 
 pub struct Ray {

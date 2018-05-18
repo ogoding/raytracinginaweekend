@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 #[derive(Copy, Clone)]
 pub struct RGB {
     red: u8,

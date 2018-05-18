@@ -33,7 +33,20 @@ fn example_2() {
     std::fs::write("example_2.ppm", image.to_ppm());
 }
 
+fn hit_sphere(center: Vec3, radius: f32, ray: &Ray) -> bool {
+    let oc = ray.origin() - center;
+    let ray_dir = ray.direction();
+    let a = Vec3::dot(&ray_dir, &ray_dir);
+    let b = Vec3::dot(&oc, &ray_dir) * 2.0;
+    let c = Vec3::dot(&oc, &oc) - radius * radius;
+    let discriminant = b * b - 4.0 * a * c;
+    discriminant > 0.0
+}
+
 fn lerp_colour(ray: &Ray) -> Vec3 {
+    if hit_sphere(Vec3::new(0.0, 0.0, -1.0), 0.5, ray) {
+        return Vec3::new(1.0, 0.0, 0.0);
+    }
     let unit_direction = ray.direction().unit();
     let t = 0.5 * (unit_direction.y() + 1.0);
     Vec3::uniform(1.0) * (1.0 - t) + Vec3::new(0.5, 0.7, 1.0) * t

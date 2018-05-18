@@ -14,6 +14,10 @@ impl Vec3 {
         Vec3{ data: [0.0, 0.0, 0.0] }
     }
 
+    pub fn uniform(v: f32) -> Vec3 {
+        Vec3{ data: [v, v, v] }
+    }
+
     pub fn new(d0: f32, d1: f32, d2: f32) -> Vec3 {
         Vec3{ data: [d0, d1, d2] }
     }
@@ -114,30 +118,60 @@ impl SubAssign for Vec3 {
     }
 }
 
-impl Mul for Vec3 {
+impl Mul<f32> for Vec3 {
+    type Output = Vec3;
+
+    fn mul(self, other: f32) -> Vec3 {
+        Vec3::new(self.x() * other, self.y() * other, self.z() * other)
+    }
+}
+
+impl MulAssign<f32> for Vec3 {
+    fn mul_assign(&mut self, other: f32) {
+        *self = Vec3::new(self.x() * other, self.y() * other, self.z() * other);
+    }
+}
+
+impl Mul<Vec3> for Vec3 {
     type Output = Vec3;
 
     fn mul(self, other: Vec3) -> Vec3 {
-        Vec3::new(self.x() + other.x(), self.y() + other.y(), self.z() + other.z())
+        Vec3::new(self.x() * other.x(), self.y() * other.y(), self.z() * other.z())
     }
 }
 
-impl MulAssign for Vec3 {
+impl MulAssign<Vec3> for Vec3 {
     fn mul_assign(&mut self, other: Vec3) {
-        *self = Vec3::new(self.x() + other.x(), self.y() + other.y(), self.z() + other.z());
+        *self = Vec3::new(self.x() * other.x(), self.y() * other.y(), self.z() * other.z());
     }
 }
 
-impl Div for Vec3 {
+impl Div<f32> for Vec3 {
+    type Output = Vec3;
+
+    fn div(self, other: f32) -> Vec3 {
+        Vec3::new(self.x() / other, self.y() / other, self.z() / other)
+    }
+}
+
+impl DivAssign<f32> for Vec3 {
+    fn div_assign(&mut self, other: f32) {
+        *self = Vec3::new(self.x() / other, self.y() / other, self.z() / other);
+    }
+}
+
+impl Div<Vec3> for Vec3 {
     type Output = Vec3;
 
     fn div(self, other: Vec3) -> Vec3 {
-        Vec3::new(self.x() + other.x(), self.y() + other.y(), self.z() + other.z())
+        Vec3::new(self.x() / other.x(), self.y() / other.y(), self.z() / other.z())
     }
 }
 
-impl DivAssign for Vec3 {
+impl DivAssign<Vec3> for Vec3 {
     fn div_assign(&mut self, other: Vec3) {
-        *self = Vec3::new(self.x() + other.x(), self.y() + other.y(), self.z() + other.z());
+        *self = Vec3::new(self.x() / other.x(), self.y() / other.y(), self.z() / other.z());
     }
 }
+
+// TODO Add trait implementations for f32 and Vec3

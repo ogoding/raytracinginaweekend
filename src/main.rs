@@ -1,5 +1,7 @@
 mod image;
+mod vec3;
 
+use vec3::Vec3;
 use image::{Image, RGB};
 
 fn example_1() {
@@ -21,10 +23,8 @@ fn example_2() {
 
     for j in (0..ny).rev() {
         for i in 0..nx {
-            let r = i as f32 / nx as f32;
-            let g = j as f32 / ny as f32;
-            let b = 0.2;
-            image.set((ny - 1) - j, i, RGB::new_scaled(r, g, b));
+            let col = Vec3::new(i as f32 / nx as f32, j as f32 / ny as f32, 0.2);
+            image.set((ny - 1) - j, i, RGB::new_scaled(col.r(), col.g(), col.b()));
         }
     }
 

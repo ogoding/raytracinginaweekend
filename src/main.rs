@@ -1,14 +1,20 @@
+extern crate rand;
+
 mod image;
 mod vec3;
 mod ray;
 mod hitable;
 mod sphere;
+mod camera;
 
 use vec3::Vec3;
 use image::{PixelPusher, Image, RGB};
 use ray::Ray;
 use hitable::{Hitable, HitableList, HitRecord};
 use sphere::Sphere;
+use camera::Camera;
+
+use rand::Rng;
 
 fn example_1() {
     let mut image = PixelPusher::new(Image::new(3, 2));
@@ -109,9 +115,39 @@ fn example_4() {
     std::fs::write("example_4.ppm", image.into_image().to_ppm());
 }
 
+fn example_5() {
+    let nx: u32 = 200;
+    let ny: u32 = 100;
+    let ns: u32 = 100;
+    let world = make_example_4_list();
+    let cam = Camera::new();
+
+    let mut image = PixelPusher::new(Image::new(nx, ny));
+
+    for j in (0..ny).rev() {
+        for i in 0..nx {
+            let mut colour = Vec3::zero();
+            for s in 0..ns {
+                let u = (i as f32 + rand::random::<f32>()) / nx as f32;
+                let v = (j as f32 + rand::random::<f32>()) / ny as f32;
+                let r = cam.get_ray(u, v);
+                colour += lerp_colour(&r, &world);
+            }
+
+            colour = colour / ns as f32;
+//            colour /= ns as f32;
+
+            image.push_pixel(RGB::new_scaled(colour.r(), colour.g(), colour.b()));
+        }
+    }
+
+    std::fs::write("example_5.ppm", image.into_image().to_ppm());
+}
+
 fn main() {
     example_1();
     example_2();
     example_3();
     example_4();
+    example_5();
 }

@@ -46,11 +46,11 @@ fn example_2() {
 fn lerp_colour<T: Hitable>(ray: &Ray, world: &T) -> Vec3 {
     let mut hit_record = HitRecord::zero();
     if world.hit(ray, 0.0, std::f32::MAX, &mut hit_record) {
-        (hit_record.normal + Vec3::uniform(1.0)) * 0.5
+        0.5 * (hit_record.normal + Vec3::uniform(1.0))
     } else {
         let unit_direction = ray.direction().unit();
         let t = 0.5 * (unit_direction.y() + 1.0);
-        Vec3::uniform(1.0) * (1.0 - t) + Vec3::new(0.5, 0.7, 1.0) * t
+        (1.0 - t) * Vec3::uniform(1.0) + t * Vec3::new(0.5, 0.7, 1.0)
     }
 }
 
@@ -82,7 +82,7 @@ fn example_3() {
         for i in 0..nx {
             let u = i as f32 / nx as f32;
             let v = j as f32 / ny as f32;
-            let r = Ray::new(origin, lower_left_corner + (horizontal * u) + (vertical * v));
+            let r = Ray::new(origin, lower_left_corner + (u * horizontal) + (v * vertical));
             let colour = lerp_colour(&r, &world);
             image.push_pixel(RGB::new_scaled(colour.r(), colour.g(), colour.b()));
         }
@@ -106,7 +106,7 @@ fn example_4() {
         for i in 0..nx {
             let u = i as f32 / nx as f32;
             let v = j as f32 / ny as f32;
-            let r = Ray::new(origin, lower_left_corner + (horizontal * u) + (vertical * v));
+            let r = Ray::new(origin, lower_left_corner + (u * horizontal) + (v * vertical));
             let colour = lerp_colour(&r, &world);
             image.push_pixel(RGB::new_scaled(colour.r(), colour.g(), colour.b()));
         }

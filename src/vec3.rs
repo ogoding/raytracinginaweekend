@@ -89,7 +89,15 @@ impl Index<usize> for Vec3 {
 
 // FIXME: Tidy all this up
 
-impl Add for Vec3 {
+impl Add<Vec3> for f32 {
+    type Output = Vec3;
+
+    fn add(self, other: Vec3) -> Vec3 {
+        Vec3::new(self + other.x(), self + other.y(), self + other.z())
+    }
+}
+
+impl Add<Vec3> for Vec3 {
     type Output = Vec3;
 
     fn add(self, other: Vec3) -> Vec3 {
@@ -114,6 +122,14 @@ impl Sub for Vec3 {
 impl SubAssign for Vec3 {
     fn sub_assign(&mut self, other: Vec3) {
         *self = Vec3::new(self.x() - other.x(), self.y() - other.y(), self.z() - other.z());
+    }
+}
+
+impl Mul<Vec3> for f32 {
+    type Output = Vec3;
+
+    fn mul(self, other: Vec3) -> Vec3 {
+        Vec3::new(self * other.x(), self * other.y(), self * other.z())
     }
 }
 

@@ -21,10 +21,53 @@ impl RGB {
     }
 }
 
+pub struct PixelPusher {
+    image: Image,
+    width_idx: u32,
+    height_idx: u32
+}
+
+impl PixelPusher {
+    pub fn new(image: Image) -> PixelPusher {
+        PixelPusher{ image, width_idx: 0, height_idx: 0 }
+    }
+
+    // TODO Add the scaled RGB pixel thing as a function here and remove from RGB type?
+
+    // TODO Change args to be individual rgb valuess?
+    pub fn push_pixel(&mut self, rgb: RGB) -> bool {
+        if self.width_idx >= self.width() && self.height_idx >= self.height() {
+            return false;
+        }
+
+        self.image.set(self.height_idx, self.width_idx, rgb);
+
+        self.width_idx += 1;
+        if self.width_idx >= self.width() {
+            self.width_idx = 0;
+            self.height_idx += 1;
+        }
+
+        return true;
+    }
+
+    pub fn width(&self) -> u32 {
+        self.image.width
+    }
+
+    pub fn height(&self) -> u32 {
+        self.image.height
+    }
+
+    pub fn into_image(self) -> Image {
+        self.image
+    }
+}
+
 pub struct Image {
     pub pixels: Vec<RGB>,
-    width: u32,
-    height: u32
+    pub width: u32,
+    pub height: u32
 }
 
 impl Image {
@@ -40,10 +83,11 @@ impl Image {
 //    }
 
     pub fn to_ppm(&self) -> String {
-        let mut ppm_string: String = String::from("P3");
+        let mut ppm_string: String = String::from("P3\n");
         ppm_string.push_str(&(self.width.to_string() + " " + &self.height.to_string() + "\n"));
         ppm_string.push_str("255\n");
 
+        // TODO Change this to only write newlines at the end of a row
         for pixel in self.pixels.iter() {
             ppm_string.push_str(&pixel.to_ppm());
         }

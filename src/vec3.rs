@@ -5,7 +5,7 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign, I
 
 #[derive(Copy, Clone, Debug)]
 pub struct Vec3 {
-    // TODO: Change this to be 3 separate fields
+    // TODO: Change this to be 3 separate fields?
     data: [f32; 3]
 }
 
@@ -23,8 +23,7 @@ impl Vec3 {
     }
 
     pub fn unit(&self) -> Vec3 {
-        let k: f32 = 1.0 / self.length();
-        Vec3::new(self.data[0] * k, self.data[1] * k, self.data[2] * k)
+        *self / self.length()
     }
 
     pub fn length(&self) -> f32 {
@@ -34,11 +33,11 @@ impl Vec3 {
     pub fn squared_length(&self) -> f32 {
         // TODO: Check this
         Vec3::dot(self, self)
-//        self.data[0] * self.data[0] + self.data[1] * self.data[1] + self.data[2] * self.data[2]
     }
 
+    // TODO Change this to be Vec3 instead of &Vec3?
     pub fn dot(v1: &Vec3, v2: &Vec3) -> f32 {
-        v1.data[0] * v2.data[0] + v1.data[1] * v2.data[1] + v1.data[2] * v2.data[2]
+        v1.x() * v2.x() + v1.y() * v2.y() + v1.z() * v2.z()
     }
 
     pub fn cross(v1: &Vec3, v2: &Vec3) -> Vec3 {
@@ -108,13 +107,13 @@ impl Sub for Vec3 {
     type Output = Vec3;
 
     fn sub(self, other: Vec3) -> Vec3 {
-        Vec3::new(self.x() + other.x(), self.y() + other.y(), self.z() + other.z())
+        Vec3::new(self.x() - other.x(), self.y() - other.y(), self.z() - other.z())
     }
 }
 
 impl SubAssign for Vec3 {
     fn sub_assign(&mut self, other: Vec3) {
-        *self = Vec3::new(self.x() + other.x(), self.y() + other.y(), self.z() + other.z());
+        *self = Vec3::new(self.x() - other.x(), self.y() - other.y(), self.z() - other.z());
     }
 }
 

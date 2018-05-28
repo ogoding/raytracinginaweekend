@@ -8,10 +8,6 @@ pub struct Sphere {
 }
 
 impl Sphere {
-    pub fn zero() -> Sphere {
-        Sphere::new(Vec3::zero(), 0.0)
-    }
-
     pub fn new(center: Vec3, radius: f32) -> Sphere {
         Sphere{ center, radius }
     }

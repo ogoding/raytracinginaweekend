@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use std::fmt;
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign, Index};
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign, Index, IndexMut};
 
 #[derive(Copy, Clone, Debug)]
 pub struct Vec3 {
@@ -31,7 +31,6 @@ impl Vec3 {
     }
 
     pub fn squared_length(&self) -> f32 {
-        // TODO: Check this
         Vec3::dot(self, self)
     }
 
@@ -87,7 +86,11 @@ impl Index<usize> for Vec3 {
     }
 }
 
-// FIXME: Tidy all this up
+impl IndexMut<usize> for Vec3 {
+    fn index_mut(&mut self, idx: usize) -> &mut <Self as Index<usize>>::Output {
+        &mut self.data[idx]
+    }
+}
 
 impl Add<Vec3> for f32 {
     type Output = Vec3;
@@ -188,5 +191,3 @@ impl DivAssign<Vec3> for Vec3 {
         *self = Vec3::new(self.x() / other.x(), self.y() / other.y(), self.z() / other.z());
     }
 }
-
-// TODO Add trait implementations for f32 and Vec3

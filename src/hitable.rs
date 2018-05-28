@@ -1,7 +1,7 @@
 use vec3::Vec3;
 use ray::Ray;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct HitRecord {
     pub t: f32,
     pub p: Vec3,
@@ -27,10 +27,6 @@ pub struct HitableList<T: Hitable> {
 }
 
 impl <T: Hitable> HitableList<T> {
-    pub fn zero() -> HitableList<T> {
-        HitableList::new(Vec::new())
-    }
-
     pub fn new(list: Vec<T>) -> HitableList<T> {
         HitableList{ hitable_list: list }
     }
@@ -49,11 +45,7 @@ impl <T: Hitable> Hitable for HitableList<T> {
             }
         }
 
-//        record = &mut temp_rec;
-        // TODO: Return a tuple of hit_anything and hit_record?
-        record.t = temp_rec.t;
-        record.p = temp_rec.p;
-        record.normal = temp_rec.normal;
+        *record = temp_rec;
 
         hit_anything
     }

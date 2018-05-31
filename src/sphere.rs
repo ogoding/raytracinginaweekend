@@ -1,21 +1,24 @@
 use vec3::Vec3;
 use ray::Ray;
+use material::Material;
 use hitable::{Hitable, HitRecord};
 
 pub struct Sphere {
     center: Vec3,
-    radius: f32
+    radius: f32,
+    material: Material
 }
 
 impl Sphere {
-    pub fn new(center: Vec3, radius: f32) -> Sphere {
-        Sphere{ center, radius }
+    pub fn new(center: Vec3, radius: f32, material: Material) -> Sphere {
+        Sphere{ center, radius, material }
     }
 
     pub fn update_hit_record(&self, record: &mut HitRecord, ray: &Ray, t: f32) {
         record.t = t;
         record.p = ray.point_at_parameter(record.t);
         record.normal = (record.p - self.center) / self.radius;
+        record.material = Some(self.material);
     }
 }
 

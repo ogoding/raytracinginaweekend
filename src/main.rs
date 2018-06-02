@@ -19,28 +19,6 @@ use material::Material;
 
 use time::PreciseTime;
 
-fn random_in_unit_sphere() -> Vec3 {
-    loop {
-        let p = 2.0 * Vec3::new(rand::random::<f32>(), rand::random::<f32>(), rand::random::<f32>()) - Vec3::uniform(1.0);
-
-        if p.squared_length() >= 1.0 {
-            return p;
-        }
-    }
-}
-
-fn diffuse_colour<T: Hitable>(ray: &Ray, world: &T) -> Vec3 {
-    let mut hit_record = HitRecord::zero();
-    if world.hit(ray, 0.001, std::f32::MAX, &mut hit_record) {
-        let target = hit_record.p + hit_record.normal + random_in_unit_sphere();
-        0.5 * diffuse_colour(&Ray::new(hit_record.p, target - hit_record.p), world)
-    } else {
-        let unit_direction = ray.direction().unit();
-        let t = 0.5 * (unit_direction.y() + 1.0);
-        (1.0 - t) * Vec3::uniform(1.0) + t * Vec3::new(0.5, 0.7, 1.0)
-    }
-}
-
 fn material_colour<T: Hitable>(ray: &Ray, world: &T, depth: u8) -> Vec3 {
     let mut hit_record = HitRecord::zero();
     if world.hit(ray, 0.001, std::f32::MAX, &mut hit_record) {
@@ -68,7 +46,9 @@ fn make_scene() -> HitableList<Sphere> {
         Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5, Material::Lambertian(Vec3::new(0.8, 0.3, 0.3))),
         Sphere::new(Vec3::new(0.0, -100.5, -1.0), 100.0, Material::Lambertian(Vec3::new(0.8, 0.8, 0.0))),
         Sphere::new(Vec3::new(1.0, 0.0, -1.0), 0.5, Material::Metal(Vec3::new(0.8, 0.6, 0.2), 0.3)),
-        Sphere::new(Vec3::new(-1.0, 0.0, -1.0), 0.5, Material::Metal(Vec3::new(0.8, 0.8, 0.8), 1.0))
+        Sphere::new(Vec3::new(-1.0, 0.0, -1.0), 0.5, Material::Dieletric(1.5)),
+        Sphere::new(Vec3::new(-1.0, 0.0, -1.0), -0.45, Material::Dieletric(1.5))
+//        Sphere::new(Vec3::new(-1.0, 0.0, -1.0), 0.5, Material::Metal(Vec3::new(0.8, 0.8, 0.8), 1.0))
     ])
 }
 
@@ -88,13 +68,11 @@ fn run() {
                 let u = (i as f32 + rand::random::<f32>()) / nx as f32;
                 let v = (j as f32 + rand::random::<f32>()) / ny as f32;
                 let r = cam.get_ray(u, v);
-//                colour += diffuse_colour(&r, &world);
+
                 colour += material_colour(&r, &world, 0);
             }
 
-            colour = colour / ns as f32;
-//            colour /= ns as f32;
-            colour = gamma(colour);
+            colour = gamma(colour / ns as f32);
 
             image.push_pixel(RGB::new_scaled(colour.r(), colour.g(), colour.b()));
         }

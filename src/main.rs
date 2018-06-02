@@ -8,6 +8,7 @@ mod hitable;
 mod sphere;
 mod camera;
 mod material;
+mod random;
 
 use vec3::Vec3;
 use image::{PixelPusher, Image, RGB};
@@ -16,8 +17,10 @@ use hitable::{Hitable, HitableList, HitRecord};
 use sphere::Sphere;
 use camera::Camera;
 use material::Material;
+use random::drand48;
 
 use time::PreciseTime;
+use std::f32::consts::PI;
 
 fn material_colour<T: Hitable>(ray: &Ray, world: &T, depth: u8) -> Vec3 {
     let mut hit_record = HitRecord::zero();
@@ -43,13 +46,16 @@ fn gamma(vec: Vec3) -> Vec3 {
 
 fn make_scene() -> HitableList<Sphere> {
     HitableList::new(vec![
-        Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5, Material::Lambertian(Vec3::new(0.8, 0.3, 0.3))),
+        Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5, Material::Lambertian(Vec3::new(0.1, 0.2, 0.5))),
         Sphere::new(Vec3::new(0.0, -100.5, -1.0), 100.0, Material::Lambertian(Vec3::new(0.8, 0.8, 0.0))),
         Sphere::new(Vec3::new(1.0, 0.0, -1.0), 0.5, Material::Metal(Vec3::new(0.8, 0.6, 0.2), 0.3)),
         Sphere::new(Vec3::new(-1.0, 0.0, -1.0), 0.5, Material::Dieletric(1.5)),
         Sphere::new(Vec3::new(-1.0, 0.0, -1.0), -0.45, Material::Dieletric(1.5))
-//        Sphere::new(Vec3::new(-1.0, 0.0, -1.0), 0.5, Material::Metal(Vec3::new(0.8, 0.8, 0.8), 1.0))
     ])
+}
+
+fn make_camera(nx: u32, ny: u32) -> Camera {
+    Camera::new()
 }
 
 fn run() {
@@ -57,16 +63,16 @@ fn run() {
     let ny: u32 = 100;
     let ns: u32 = 100;
     let world = make_scene();
-    let cam = Camera::new();
+    let cam = make_camera(nx, ny);
 
     let mut image = PixelPusher::new(Image::new(nx, ny));
 
     for j in (0..ny).rev() {
         for i in 0..nx {
             let mut colour = Vec3::zero();
-            for _s in 0..ns {
-                let u = (i as f32 + rand::random::<f32>()) / nx as f32;
-                let v = (j as f32 + rand::random::<f32>()) / ny as f32;
+            for _ in 0..ns {
+                let u = (i as f32 + drand48()) / nx as f32;
+                let v = (j as f32 + drand48()) / ny as f32;
                 let r = cam.get_ray(u, v);
 
                 colour += material_colour(&r, &world, 0);

@@ -41,16 +41,17 @@ impl <T: Hitable> Hitable for HitableList<T> {
         let mut hit_anything = false;
         let mut closest_so_far = t_max;
 
+        // Could this escape loop early? and/or be a map/reduce?
         for hitable in self.hitable_list.iter() {
             if hitable.hit(ray, t_min, closest_so_far, &mut temp_rec) {
                 hit_anything = true;
                 closest_so_far = temp_rec.t;
                 // TODO: Change Hitable.hit to return the HitRecord result and assign here instead of at end of fn
-//                *record = temp_rec;
+                *record = temp_rec;
             }
         }
 
-        *record = temp_rec;
+//        *record = temp_rec;
 
         hit_anything
     }

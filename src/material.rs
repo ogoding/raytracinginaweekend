@@ -1,7 +1,7 @@
 use vec3::Vec3;
 use ray::Ray;
 use hitable::HitRecord;
-use super::rand;
+use random::drand48;
 
 
 // TODO Implement Material as a trait
@@ -11,14 +11,12 @@ use super::rand;
 
 fn random_in_unit_sphere() -> Vec3 {
     loop {
-        let p = 2.0 * Vec3::new(rand::random::<f32>(), rand::random::<f32>(), rand::random::<f32>()) - Vec3::uniform(1.0);
+        let p = 2.0 * Vec3::random() - Vec3::uniform(1.0);
 
         if p.squared_length() >= 1.0 {
-            break;
+            return p;
         }
     }
-
-    Vec3::zero()
 }
 
 fn reflect(v: &Vec3, n: &Vec3) -> Vec3 {
@@ -62,16 +60,16 @@ fn metal_scatter(albedo: &Vec3, fuzz: f32, ray: &Ray, hit_record: &HitRecord, at
 }
 
 fn dieletric_scatter(ref_idx: f32, ray_in: &Ray, hit_record: &HitRecord, attenuation: &mut Vec3, scattered: &mut Ray) -> bool {
-    *attenuation = Vec3::new(1.0, 1.0, 1.0);
+    *attenuation = Vec3::uniform(1.0);
 
     let (outward_normal, ni_over_nt, cosine) = if Vec3::dot(&ray_in.direction(), &hit_record.normal) > 0.0 {
-        (-1.0 * hit_record.normal,
+        (-hit_record.normal,
             ref_idx,
             ref_idx * Vec3::dot(&ray_in.direction(), &hit_record.normal) / ray_in.direction().length())
     } else {
         (hit_record.normal,
             1.0 / ref_idx,
-            -1.0 * Vec3::dot(&ray_in.direction(), &hit_record.normal) / ray_in.direction().length())
+            -Vec3::dot(&ray_in.direction(), &hit_record.normal) / ray_in.direction().length())
     };
 
     let reflected = reflect(&ray_in.direction(), &hit_record.normal);
@@ -79,7 +77,7 @@ fn dieletric_scatter(ref_idx: f32, ray_in: &Ray, hit_record: &HitRecord, attenua
         (schlick(cosine, ref_idx), refracted_ray)
     } else { (1.0, Vec3::zero()) };
 
-    if rand::random::<f32>() < reflect_prob {
+    if drand48() < reflect_prob {
         *scattered = Ray::new(hit_record.p, reflected);
     } else {
         *scattered = Ray::new(hit_record.p, refracted);
@@ -88,6 +86,7 @@ fn dieletric_scatter(ref_idx: f32, ray_in: &Ray, hit_record: &HitRecord, attenua
     true
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Copy, Clone)]
 pub enum Material {
     Lambertian(Vec3),

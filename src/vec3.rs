@@ -40,9 +40,9 @@ impl Vec3 {
     }
 
     pub fn cross(v1: &Vec3, v2: &Vec3) -> Vec3 {
-        Vec3::new(v1.data[1] * v2.data[2] - v1.data[2] * v2.data[1],
-                    -(v1.data[0] * v2.data[2] - v1.data[2] * v2.data[0]),
-                    v1.data[0] * v2.data[1] - v1.data[1] * v2.data[0])
+        Vec3::new(v1.y() * v2.z() - v1.z() * v2.y(),
+                    -(v1.x() * v2.z() - v1.z() * v2.x()),
+                    v1.x() * v2.y() - v1.y() * v2.x())
     }
 
     pub fn x(&self) -> f32 {

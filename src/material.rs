@@ -64,31 +64,20 @@ fn metal_scatter(albedo: &Vec3, fuzz: f32, ray: &Ray, hit_record: &HitRecord, at
 fn dieletric_scatter(ref_idx: f32, ray_in: &Ray, hit_record: &HitRecord, attenuation: &mut Vec3, scattered: &mut Ray) -> bool {
     *attenuation = Vec3::new(1.0, 1.0, 1.0);
 
-    let mut outward_normal = Vec3::zero();
-    let mut ni_over_nt = 0.0;
-    let mut cosine = 0.0;
-
-    if Vec3::dot(&ray_in.direction(), &hit_record.normal) > 0.0 {
-        outward_normal = -1.0 * hit_record.normal;
-        ni_over_nt = ref_idx;
-        cosine = ref_idx * Vec3::dot(&ray_in.direction(), &hit_record.normal) / ray_in.direction().length();
+    let (outward_normal, ni_over_nt, cosine) = if Vec3::dot(&ray_in.direction(), &hit_record.normal) > 0.0 {
+        (-1.0 * hit_record.normal,
+            ref_idx,
+            ref_idx * Vec3::dot(&ray_in.direction(), &hit_record.normal) / ray_in.direction().length())
     } else {
-        outward_normal = hit_record.normal;
-        ni_over_nt = 1.0 / ref_idx;
-        cosine = -Vec3::dot(&ray_in.direction(), &hit_record.normal) / ray_in.direction().length();
-    }
+        (hit_record.normal,
+            1.0 / ref_idx,
+            -1.0 * Vec3::dot(&ray_in.direction(), &hit_record.normal) / ray_in.direction().length())
+    };
 
-
-    let mut reflect_prob = 0.0;
-    let mut refracted = Vec3::zero();
     let reflected = reflect(&ray_in.direction(), &hit_record.normal);
-
-    if let Some(refracted_ray) = refract(&ray_in.direction(), &outward_normal, ni_over_nt) {
-        refracted = refracted_ray;
-        reflect_prob = schlick(cosine, ref_idx);
-    } else {
-        reflect_prob = 1.0
-    }
+    let (reflect_prob, refracted) = if let Some(refracted_ray) = refract(&ray_in.direction(), &outward_normal, ni_over_nt) {
+        (schlick(cosine, ref_idx), refracted_ray)
+    } else { (1.0, Vec3::zero()) };
 
     if rand::random::<f32>() < reflect_prob {
         *scattered = Ray::new(hit_record.p, reflected);

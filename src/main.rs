@@ -20,7 +20,6 @@ use material::Material;
 use random::drand48;
 
 use time::PreciseTime;
-use std::f32::consts::PI;
 
 fn material_colour<T: Hitable>(ray: &Ray, world: &T, depth: u8) -> Vec3 {
     let mut hit_record = HitRecord::zero();
@@ -54,14 +53,46 @@ fn make_scene() -> HitableList<Sphere> {
     ])
 }
 
+fn make_random_scene() -> HitableList<Sphere> {
+    let mut spheres = vec![Sphere::new(Vec3::new(0.0, -1000.0, 0.0), 1000.0, Material::Lambertian(Vec3::uniform(0.5)))];
+
+    for a in -11..11 {
+        for b in -11..11 {
+            let choose_mat = drand48();
+            let center = Vec3::new(a as f32 + 0.9 * drand48(), 0.2, b as f32 + 0.9 * drand48());
+            if (center - Vec3::new(4.0, 0.2, 0.0)).length() > 0.9 {
+                if choose_mat < 0.8 {
+                    spheres.push(Sphere::new(center, 0.2,
+                                             Material::Lambertian(Vec3::new(drand48() * drand48(),
+                                                           drand48() * drand48(),
+                                                           drand48() * drand48()))));
+                } else if choose_mat < 0.95 {
+                    spheres.push(Sphere::new(center, 0.2,
+                                             Material::Metal(Vec3::new(0.5 * (1.0 + drand48()),
+                                                           0.5 * (1.0 + drand48()),
+                                                           0.5 * (1.0 + drand48())),
+                                                         0.5 * drand48())))
+                } else {
+                    spheres.push(Sphere::new(center, 0.2, Material::Dieletric(1.5)))
+                }
+            }
+        }
+    }
+
+    HitableList::new(spheres)
+}
+
 fn make_camera(nx: u32, ny: u32) -> Camera {
-    Camera::new()
+    let lookfrom = Vec3::new(-2.0, 2.0, 1.0);
+    let lookat = Vec3::new(0.0, 0.0, -1.0);
+    let vup = Vec3::new(0.0, 1.0, 0.0);
+    Camera::new(lookfrom, lookat, vup, 90.0, nx as f32 / ny as f32)
 }
 
 fn run() {
-    let nx: u32 = 200;
-    let ny: u32 = 100;
-    let ns: u32 = 100;
+    let nx: u32 = 800;
+    let ny: u32 = 400;
+    let ns: u32 = 10;
     let world = make_scene();
     let cam = make_camera(nx, ny);
 

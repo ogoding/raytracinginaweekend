@@ -4,7 +4,9 @@ use material::Material;
 
 #[derive(Debug, Copy, Clone)]
 pub struct HitRecord {
+    // FIXME: Improve naming
     pub t: f32,
+    // FIXME: Improve naming
     pub p: Vec3,
     pub normal: Vec3,
     pub material: Option<Material>

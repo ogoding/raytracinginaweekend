@@ -79,14 +79,17 @@ fn make_random_scene() -> HitableList<Sphere> {
         }
     }
 
+    spheres.push(Sphere::new(Vec3::new(0.0, 1.0, 0.0), 1.0, Material::Dieletric(1.5)));
+    spheres.push(Sphere::new(Vec3::new(-4.0, 1.0, 0.0), 1.0, Material::Lambertian(Vec3::new(0.4, 0.2, 0.1))));
+    spheres.push(Sphere::new(Vec3::new(4.0, 1.0, 0.0), 1.0, Material::Metal(Vec3::new(0.7, 0.6, 0.5), 0.0)));
+
     HitableList::new(spheres)
 }
 
 fn make_camera(nx: u32, ny: u32) -> Camera {
-    let lookfrom = Vec3::new(-2.0, 2.0, 1.0);
+    let lookfrom = Vec3::new(3.0, 3.0, 2.0);
     let lookat = Vec3::new(0.0, 0.0, -1.0);
-    let vup = Vec3::new(0.0, 1.0, 0.0);
-    Camera::new(lookfrom, lookat, vup, 90.0, nx as f32 / ny as f32)
+    Camera::new(lookfrom, lookat, Vec3::new(0.0, 1.0, 0.0), 20.0, nx as f32 / ny as f32)
 }
 
 fn run() {
@@ -94,6 +97,7 @@ fn run() {
     let ny: u32 = 400;
     let ns: u32 = 10;
     let world = make_scene();
+//    let world = make_random_scene();
     let cam = make_camera(nx, ny);
 
     let mut image = PixelPusher::new(Image::new(nx, ny));

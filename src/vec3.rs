@@ -22,8 +22,16 @@ impl Vec3 {
         Vec3{ data: [v, v, v] }
     }
 
+    pub fn uniform_2d(v: f32) -> Vec3 {
+        Vec3{ data: [v, v, 0.0] }
+    }
+
     pub fn random() -> Vec3 {
         Vec3::new(drand48(), drand48(), drand48())
+    }
+
+    pub fn random_2d() -> Vec3 {
+        Vec3::new(drand48(), drand48(), 0.0)
     }
 
     pub fn new(d0: f32, d1: f32, d2: f32) -> Vec3 {
@@ -53,11 +61,13 @@ impl Vec3 {
         v1.x() * v2.x() + v1.y() * v2.y() + v1.z() * v2.z()
     }
 
+    // TODO Change this to be Vec3 instead of &Vec3?
     pub fn cross(v1: &Vec3, v2: &Vec3) -> Vec3 {
         Vec3::new(    v1.y() * v2.z() - v1.z() * v2.y(),
                     -(v1.x() * v2.z() - v1.z() * v2.x()),
                       v1.x() * v2.y() - v1.y() * v2.x())
     }
+
     pub fn x(&self) -> f32 {
         self.data[0]
     }

@@ -8,7 +8,7 @@
 A Rust implementation of Peter Shirley's excellent [Raytracing book series](https://github.com/petershirley/raytracinginoneweekend) as a side project to better learn Rust and Ray-Tracing Engines.
 
 Current Progress:
-![current_progress.ppm](https://github.com/ogoding/raytracinginaweekend/raw/master/images/current_progress.ppm "Current Progress")
+![images/current_progress.jpg](https://github.com/ogoding/raytracinginaweekend/raw/master/images/current_progress.jpg "Current Progress")
 
 
 ## TODO:

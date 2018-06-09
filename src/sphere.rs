@@ -14,6 +14,7 @@ impl Sphere {
         Sphere{ center, radius, material }
     }
 
+    #[inline]
     pub fn update_hit_record(&self, record: &mut HitRecord, ray: &Ray, t: f32) {
         record.t = t;
         record.p = ray.point_at_parameter(record.t);
@@ -25,10 +26,9 @@ impl Sphere {
 impl Hitable for Sphere {
     fn hit(&self, ray: &Ray, t_min: f32, t_max: f32, record: &mut HitRecord) -> bool {
         let oc = ray.origin() - self.center;
-        let ray_direction = ray.direction();
-        let a = Vec3::dot(&ray_direction, &ray_direction);
-        let b = Vec3::dot(&oc, &ray_direction);
-        let c = Vec3::dot(&oc, &oc) - self.radius * self.radius;
+        let a = Vec3::dot(&ray.direction(), &ray.direction());
+        let b = Vec3::dot(&oc, &ray.direction());
+        let c = Vec3::dot(&oc, &oc) - self.radius * self.radius;;
         let discriminant = b * b - a * c;
 
         // TODO Refactor this to be simpler

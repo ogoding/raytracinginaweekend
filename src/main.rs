@@ -56,28 +56,28 @@ fn make_scene() -> HitableList<Sphere> {
 fn make_random_scene() -> HitableList<Sphere> {
     let mut spheres = vec![Sphere::new(Vec3::new(0.0, -1000.0, 0.0), 1000.0, Material::Lambertian(Vec3::uniform(0.5)))];
 
-    for a in -11..11 {
-        for b in -11..11 {
-            let choose_mat = drand48();
-            let center = Vec3::new(a as f32 + 0.9 * drand48(), 0.2, b as f32 + 0.9 * drand48());
-            if (center - Vec3::new(4.0, 0.2, 0.0)).length() > 0.9 {
-                if choose_mat < 0.8 {
-                    spheres.push(Sphere::new(center, 0.2,
-                                             Material::Lambertian(Vec3::new(drand48() * drand48(),
-                                                           drand48() * drand48(),
-                                                           drand48() * drand48()))));
-                } else if choose_mat < 0.95 {
-                    spheres.push(Sphere::new(center, 0.2,
-                                             Material::Metal(Vec3::new(0.5 * (1.0 + drand48()),
-                                                           0.5 * (1.0 + drand48()),
-                                                           0.5 * (1.0 + drand48())),
-                                                         0.5 * drand48())))
-                } else {
-                    spheres.push(Sphere::new(center, 0.2, Material::Dieletric(1.5)))
-                }
-            }
-        }
-    }
+//    for a in -11..11 {
+//        for b in -11..11 {
+//            let choose_mat = drand48();
+//            let center = Vec3::new(a as f32 + 0.9 * drand48(), 0.2, b as f32 + 0.9 * drand48());
+//            if (center - Vec3::new(4.0, 0.2, 0.0)).length() > 0.9 {
+//                if choose_mat < 0.8 {
+//                    spheres.push(Sphere::new(center, 0.2,
+//                                             Material::Lambertian(Vec3::new(drand48() * drand48(),
+//                                                           drand48() * drand48(),
+//                                                           drand48() * drand48()))));
+//                } else if choose_mat < 0.95 {
+//                    spheres.push(Sphere::new(center, 0.2,
+//                                             Material::Metal(Vec3::new(0.5 * (1.0 + drand48()),
+//                                                           0.5 * (1.0 + drand48()),
+//                                                           0.5 * (1.0 + drand48())),
+//                                                         0.5 * drand48())))
+//                } else {
+//                    spheres.push(Sphere::new(center, 0.2, Material::Dieletric(1.5)))
+//                }
+//            }
+//        }
+//    }
 
     spheres.push(Sphere::new(Vec3::new(0.0, 1.0, 0.0), 1.0, Material::Dieletric(1.5)));
     spheres.push(Sphere::new(Vec3::new(-4.0, 1.0, 0.0), 1.0, Material::Lambertian(Vec3::new(0.4, 0.2, 0.1))));
@@ -87,17 +87,19 @@ fn make_random_scene() -> HitableList<Sphere> {
 }
 
 fn make_camera(nx: u32, ny: u32) -> Camera {
-    let lookfrom = Vec3::new(3.0, 3.0, 2.0);
-    let lookat = Vec3::new(0.0, 0.0, -1.0);
-    Camera::new(lookfrom, lookat, Vec3::new(0.0, 1.0, 0.0), 20.0, nx as f32 / ny as f32)
+    let lookfrom = Vec3::new(13.0, 2.0, 3.0);
+    let lookat = Vec3::new(0.0, 0.0, 0.0);
+    let dist_to_focus = 10.0;
+    let aperture = 0.1;
+    Camera::new(lookfrom, lookat, Vec3::new(0.0, 1.0, 0.0), 20.0, nx as f32 / ny as f32, aperture, dist_to_focus)
 }
 
 fn run() {
-    let nx: u32 = 800;
+    let nx: u32 = 600;
     let ny: u32 = 400;
     let ns: u32 = 10;
-    let world = make_scene();
-//    let world = make_random_scene();
+//    let world = make_scene();
+    let world = make_random_scene();
     let cam = make_camera(nx, ny);
 
     let mut image = PixelPusher::new(Image::new(nx, ny));

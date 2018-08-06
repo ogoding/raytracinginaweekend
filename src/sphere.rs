@@ -17,7 +17,7 @@ impl Sphere {
     #[inline(always)]
     pub fn create_hit_record(&self, ray: &Ray, t: f32) -> HitRecord {
         let p = ray.point_at_parameter(t);
-        HitRecord::new(t, p, (p - self.center) / self.radius, Some(self.material))
+        HitRecord::new(t, p, (p - self.center) / self.radius, self.material)
     }
 }
 
@@ -26,20 +26,19 @@ impl Hitable for Sphere {
         let oc = ray.origin() - self.center;
         let a = Vec3::dot(&ray.direction(), &ray.direction());
         let b = Vec3::dot(&oc, &ray.direction());
-        let c = Vec3::dot(&oc, &oc) - self.radius * self.radius;;
-        let discriminant = b * b - a * c;
+        let c = Vec3::dot(&oc, &oc) - self.radius.powi(2);
+        let discriminant = b.powi(2) - a * c;
 
-        // TODO Refactor this to be simpler
         if discriminant > 0.0 {
             let discrim_sqrt = discriminant.sqrt();
-            let mut temp = (-b - discrim_sqrt) / a;
-            if t_max > temp && temp > t_min {
-                return Some(self.create_hit_record(ray, temp));
+            let mut t = (-b - discrim_sqrt) / a;
+            if t_max > t && t > t_min {
+                return Some(self.create_hit_record(ray, t));
             }
 
-            temp = (-b + discrim_sqrt) / a;
-            if t_max > temp && temp > t_min {
-                return Some(self.create_hit_record(ray, temp));
+            t = (-b + discrim_sqrt) / a;
+            if t_max > t && t > t_min {
+                return Some(self.create_hit_record(ray, t));
             }
         }
 

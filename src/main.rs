@@ -26,14 +26,13 @@ use std::sync::atomic::Ordering;
 
 fn material_colour<T: Hitable>(ray: &Ray, world: &T, depth: u8) -> Vec3 {
     if let Some(hit_record) = world.hit(ray, 0.001, std::f32::MAX) {
-        let mut scattered = Ray::zero();
-        let mut attenuation = Vec3::zero();
-
-        if depth < 50 && hit_record.material.unwrap().scatter(ray, &hit_record, &mut attenuation, &mut scattered) {
-            attenuation * material_colour(&scattered, world, depth + 1)
-        } else {
-            Vec3::zero()
+        if let Some((attenuation, scattered)) = hit_record.material.scatter(ray, &hit_record) {
+            if depth < 50 {
+                return attenuation * material_colour(&scattered, world, depth + 1);
+            }
         }
+
+        Vec3::zero()
     } else {
         let unit_direction = ray.direction().unit();
         let t = 0.5 * (unit_direction.y() + 1.0);
@@ -100,8 +99,8 @@ fn run() {
     let nx: u32 = 600;
     let ny: u32 = 400;
     let ns: u32 = 10;
-//    let world = make_scene();
-    let world = make_random_scene();
+    let world = make_scene();
+//    let world = make_random_scene();
     let cam = make_camera(nx, ny);
 
 //    let mut image = PixelPusher::new(Image::new(nx, ny));

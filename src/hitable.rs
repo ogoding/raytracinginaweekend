@@ -9,15 +9,11 @@ pub struct HitRecord {
     // FIXME: Improve naming
     pub p: Vec3,
     pub normal: Vec3,
-    pub material: Option<Material>
+    pub material: Material
 }
 
 impl HitRecord {
-    pub fn zero() -> HitRecord {
-        HitRecord::new(0.0, Vec3::zero(), Vec3::zero(), None)
-    }
-
-    pub fn new(t: f32, p: Vec3, normal: Vec3, material: Option<Material>) -> HitRecord {
+    pub fn new(t: f32, p: Vec3, normal: Vec3, material: Material) -> HitRecord {
         HitRecord{ t, p, normal, material }
     }
 }
@@ -26,6 +22,7 @@ pub trait Hitable {
     fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord>;
 }
 
+// TODO: Replace this with some sort of non-uniform typed arena - e.g. https://github.com/PeterReid/copy_arena
 pub struct HitableList<T: Hitable> {
     hitable_list: Vec<T>
 }

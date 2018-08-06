@@ -14,17 +14,15 @@ impl Sphere {
         Sphere{ center, radius, material }
     }
 
-    #[inline]
-    pub fn update_hit_record(&self, record: &mut HitRecord, ray: &Ray, t: f32) {
-        record.t = t;
-        record.p = ray.point_at_parameter(record.t);
-        record.normal = (record.p - self.center) / self.radius;
-        record.material = Some(self.material);
+    #[inline(always)]
+    pub fn create_hit_record(&self, ray: &Ray, t: f32) -> HitRecord {
+        let p = ray.point_at_parameter(t);
+        HitRecord::new(t, p, (p - self.center) / self.radius, Some(self.material))
     }
 }
 
 impl Hitable for Sphere {
-    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32, record: &mut HitRecord) -> bool {
+    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
         let oc = ray.origin() - self.center;
         let a = Vec3::dot(&ray.direction(), &ray.direction());
         let b = Vec3::dot(&oc, &ray.direction());
@@ -33,19 +31,18 @@ impl Hitable for Sphere {
 
         // TODO Refactor this to be simpler
         if discriminant > 0.0 {
-            let mut temp = (-b - discriminant.sqrt()) / a;
+            let discrim_sqrt = discriminant.sqrt();
+            let mut temp = (-b - discrim_sqrt) / a;
             if t_max > temp && temp > t_min {
-                self.update_hit_record(record, ray, temp);
-                return true;
+                return Some(self.create_hit_record(ray, temp));
             }
 
-            temp = (-b + discriminant.sqrt()) / a;
+            temp = (-b + discrim_sqrt) / a;
             if t_max > temp && temp > t_min {
-                self.update_hit_record(record, ray, temp);
-                return true;
+                return Some(self.create_hit_record(ray, temp));
             }
         }
 
-        false
+        None
     }
 }

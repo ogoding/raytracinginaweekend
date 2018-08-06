@@ -2,6 +2,9 @@
 
 use std::fmt;
 use vec3::Vec3;
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+pub static RAY_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 #[derive(Copy, Clone, Debug)]
 pub struct Ray {
@@ -11,6 +14,7 @@ pub struct Ray {
 
 impl Ray {
     pub fn new(origin: Vec3, direction: Vec3) -> Ray {
+        RAY_COUNT.fetch_add(1, Ordering::SeqCst);
         Ray{ origin, direction }
     }
 

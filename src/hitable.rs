@@ -23,8 +23,7 @@ impl HitRecord {
 }
 
 pub trait Hitable {
-    // TODO: Make this return the resultant hit_record?
-    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32, record: &mut HitRecord) -> bool;
+    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord>;
 }
 
 pub struct HitableList<T: Hitable> {
@@ -38,23 +37,24 @@ impl <T: Hitable> HitableList<T> {
 }
 
 impl <T: Hitable> Hitable for HitableList<T> {
-    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32, record: &mut HitRecord) -> bool {
-        let mut temp_rec = HitRecord::zero();
-        let mut hit_anything = false;
+    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
+        let mut temp_rec = None;
         let mut closest_so_far = t_max;
 
         // Could this escape loop early? and/or be a map/reduce?
         for hitable in self.hitable_list.iter() {
-            if hitable.hit(ray, t_min, closest_so_far, &mut temp_rec) {
-                hit_anything = true;
-                closest_so_far = temp_rec.t;
-                // TODO: Change Hitable.hit to return the HitRecord result and assign here instead of at end of fn
-                *record = temp_rec;
+//            if let Some(record) = hitable.hit(ray, t_min, closest_so_far) {
+//                closest_so_far = record.t;
+//                temp_rec = Some(record);
+//            }
+
+            let record = hitable.hit(ray, t_min, closest_so_far);
+            if record.is_some() {
+                closest_so_far = record.unwrap().t;
+                temp_rec = record;
             }
         }
 
-//        *record = temp_rec;
-
-        hit_anything
+        temp_rec
     }
 }

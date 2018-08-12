@@ -9,7 +9,6 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign, N
 
 #[derive(Copy, Clone, Debug)]
 pub struct Vec3 {
-    // TODO: Change this to be 3 separate fields?
     data: [f32; 3]
 }
 

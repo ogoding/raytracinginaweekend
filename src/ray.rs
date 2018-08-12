@@ -9,17 +9,19 @@ pub static RAY_COUNT: AtomicUsize = AtomicUsize::new(0);
 #[derive(Copy, Clone, Debug)]
 pub struct Ray {
     origin: Vec3,
-    direction: Vec3
+    direction: Vec3,
+    time: f32
 }
 
 impl Ray {
-    pub fn new(origin: Vec3, direction: Vec3) -> Ray {
-        RAY_COUNT.fetch_add(1, Ordering::SeqCst);
-        Ray{ origin, direction }
+    pub fn new(origin: Vec3, direction: Vec3, time: f32) -> Ray {
+        RAY_COUNT.fetch_add(1, Ordering::Relaxed);
+        Ray{ origin, direction, time }
     }
 
     pub fn zero() -> Ray {
-        Ray{ origin: Vec3::zero(), direction: Vec3::zero() }
+        RAY_COUNT.fetch_add(1, Ordering::Relaxed);
+        Ray{ origin: Vec3::zero(), direction: Vec3::zero(), time: 0.0 }
     }
 
     pub fn origin(&self) -> Vec3 {
@@ -28,6 +30,10 @@ impl Ray {
 
     pub fn direction(&self) -> Vec3 {
         self.direction
+    }
+
+    pub fn time(&self) -> f32 {
+        self.time
     }
 
     pub fn point_at_parameter(&self, t: f32) -> Vec3 {

@@ -1,6 +1,7 @@
 extern crate rand;
 extern crate time;
 extern crate xorshift;
+#[macro_use] extern crate lazy_static;
 
 mod image;
 mod vec3;
@@ -10,26 +11,32 @@ mod sphere;
 mod camera;
 mod material;
 mod random;
+//mod bounding_volume;
+//mod texture;
+//mod perlin;
 
 use vec3::Vec3;
 //use image::{PixelPusher, Image, RGB};
 use image::{Image, RGB};
 use ray::{Ray, RAY_COUNT};
-use hitable::{Hitable, HitableList, HitRecord};
-use sphere::Sphere;
+use hitable::{Hitable, HitableList};
+use sphere::{Sphere, MovingSphere};
 use camera::Camera;
 use material::Material;
 use random::drand48;
 
-use time::{PreciseTime, Duration};
+use time::PreciseTime;
 use std::sync::atomic::Ordering;
+
+// TODO: Create structs for Window/Scene descriptors
 
 fn material_colour<T: Hitable>(ray: &Ray, world: &T, depth: u8) -> Vec3 {
     if let Some(hit_record) = world.hit(ray, 0.001, std::f32::MAX) {
+        // TODO: Try removing the &mut arguments
         let mut scattered = Ray::zero();
         let mut attenuation = Vec3::zero();
 
-        if depth < 50 && hit_record.material.unwrap().scatter(ray, &hit_record, &mut attenuation, &mut scattered) {
+        if depth < 50 && hit_record.material.scatter(ray, &hit_record, &mut attenuation, &mut scattered) {
             attenuation * material_colour(&scattered, world, depth + 1)
         } else {
             Vec3::zero()
@@ -45,6 +52,7 @@ fn gamma(vec: Vec3) -> Vec3 {
     Vec3::new(vec.x().sqrt(), vec.y().sqrt(), vec.z().sqrt())
 }
 
+#[allow(dead_code)]
 fn make_scene() -> HitableList<Sphere> {
     HitableList::new(vec![
         Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5, Material::Lambertian(Vec3::new(0.1, 0.2, 0.5))),
@@ -55,6 +63,12 @@ fn make_scene() -> HitableList<Sphere> {
     ])
 }
 
+//#[allow(dead_code)]
+//fn make_perlin_scene() -> HitableList<Sphere> {
+//
+//}
+
+#[allow(dead_code)]
 fn make_random_scene() -> HitableList<Sphere> {
     let mut spheres = vec![Sphere::new(Vec3::new(0.0, -1000.0, 0.0), 1000.0, Material::Lambertian(Vec3::uniform(0.5)))];
 
@@ -93,7 +107,7 @@ fn make_camera(nx: u32, ny: u32) -> Camera {
     let lookat = Vec3::new(0.0, 0.0, 0.0);
     let dist_to_focus = 10.0;
     let aperture = 0.1;
-    Camera::new(lookfrom, lookat, Vec3::new(0.0, 1.0, 0.0), 20.0, nx as f32 / ny as f32, aperture, dist_to_focus)
+    Camera::new(lookfrom, lookat, Vec3::new(0.0, 1.0, 0.0), 20.0, nx as f32 / ny as f32, aperture, dist_to_focus, 0.0, 1.0)
 }
 
 fn run() {

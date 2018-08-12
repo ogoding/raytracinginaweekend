@@ -1,7 +1,7 @@
 use super::rand::random;
 use std::cell::RefCell;
 use time::precise_time_ns;
-use xorshift::{Rand, Rng, SeedableRng, Xorshift128};
+use xorshift::{Rng, SeedableRng, Xorshift128};
 
 thread_local! {
     static XOR_SHIFT: RefCell<Xorshift128> = {

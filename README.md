@@ -17,3 +17,4 @@ Current Progress:
 * Add some support for concurrent rays - via Rayon or Faster libraries
 * Restructure hit detection and scattering to better support parallel ray tracing
 * General refactorings and renaming for clarity
+* Implement Default instead of T::zero()

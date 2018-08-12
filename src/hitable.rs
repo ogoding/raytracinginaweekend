@@ -2,6 +2,7 @@ use vec3::Vec3;
 use ray::Ray;
 use material::Material;
 
+//#[derive(Debug)]
 #[derive(Debug, Copy, Clone)]
 pub struct HitRecord {
     // FIXME: Improve naming
@@ -9,15 +10,11 @@ pub struct HitRecord {
     // FIXME: Improve naming
     pub p: Vec3,
     pub normal: Vec3,
-    pub material: Option<Material>
+    pub material: Material
 }
 
 impl HitRecord {
-    pub fn zero() -> HitRecord {
-        HitRecord::new(0.0, Vec3::zero(), Vec3::zero(), None)
-    }
-
-    pub fn new(t: f32, p: Vec3, normal: Vec3, material: Option<Material>) -> HitRecord {
+    pub fn new(t: f32, p: Vec3, normal: Vec3, material: Material) -> HitRecord {
         HitRecord{ t, p, normal, material }
     }
 }

@@ -17,7 +17,7 @@ impl RGB {
     }
 
     fn to_ppm(&self) -> String {
-        String::from(self.red.to_string() + " " + &self.green.to_string() + " " + &self.blue.to_string() + "\n")
+        self.red.to_string() + " " + &self.green.to_string() + " " + &self.blue.to_string() + "\n"
     }
 }
 
@@ -48,7 +48,7 @@ impl PixelPusher {
             self.height_idx += 1;
         }
 
-        return true;
+        true
     }
 
     pub fn width(&self) -> u32 {
@@ -88,7 +88,7 @@ impl Image {
         ppm_string.push_str("255\n");
 
         // TODO Change this to only write newlines at the end of a row
-        for pixel in self.pixels.iter() {
+        for pixel in &self.pixels {
             ppm_string.push_str(&pixel.to_ppm());
         }
 

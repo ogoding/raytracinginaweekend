@@ -2,7 +2,7 @@ use vec3::Vec3;
 use ray::Ray;
 use hitable::HitRecord;
 use random::drand48;
-
+//use texture::Texture;
 
 // TODO Implement Material as a trait
 //pub trait Material {
@@ -13,7 +13,7 @@ fn random_in_unit_sphere() -> Vec3 {
     loop {
         let p = 2.0 * Vec3::random() - Vec3::uniform(1.0);
 
-        if p.squared_length() >= 1.0 {
+        if p.squared_length() < 1.0 {
             return p;
         }
     }
@@ -41,19 +41,19 @@ fn schlick(cosine: f32, ref_idx: f32) -> f32 {
     r0 + (1.0 - r0) * (1.0 - cosine).powi(5)
 }
 
-fn lambert_scatter(albedo: &Vec3, _ray: &Ray, hit_record: &HitRecord, attenuation: &mut Vec3, scattered: &mut Ray) -> bool {
+fn lambert_scatter(albedo: &Vec3, ray: &Ray, hit_record: &HitRecord, attenuation: &mut Vec3, scattered: &mut Ray) -> bool {
     let target = hit_record.p + hit_record.normal + random_in_unit_sphere();
 
-    *scattered = Ray::new(hit_record.p, target - hit_record.p);
+    *scattered = Ray::new(hit_record.p, target - hit_record.p, ray.time());
     *attenuation = *albedo;
-    return true;
+    true
 }
 
 fn metal_scatter(albedo: &Vec3, fuzz: f32, ray: &Ray, hit_record: &HitRecord, attenuation: &mut Vec3, scattered: &mut Ray) -> bool {
     let reflected = reflect(&ray.direction().unit(), &hit_record.normal);
 
     let fuzz = if fuzz < 1.0 { fuzz } else { 1.0 };
-    *scattered = Ray::new(hit_record.p, reflected + fuzz * random_in_unit_sphere());
+    *scattered = Ray::new(hit_record.p, reflected + fuzz * random_in_unit_sphere(), ray.time());
     *attenuation = *albedo;
 
     Vec3::dot(&scattered.direction(), &hit_record.normal) > 0.0
@@ -78,14 +78,15 @@ fn dieletric_scatter(ref_idx: f32, ray_in: &Ray, hit_record: &HitRecord, attenua
     } else { (1.0, Vec3::zero()) };
 
     if drand48() < reflect_prob {
-        *scattered = Ray::new(hit_record.p, reflected);
+        *scattered = Ray::new(hit_record.p, reflected, ray_in.time());
     } else {
-        *scattered = Ray::new(hit_record.p, refracted);
+        *scattered = Ray::new(hit_record.p, refracted, ray_in.time());
     }
 
     true
 }
 
+// TODO: Rewrite this as a trait
 #[allow(dead_code)]
 #[derive(Debug, Copy, Clone)]
 pub enum Material {

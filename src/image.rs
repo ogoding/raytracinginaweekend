@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+// TODO: Replace Image struct with image crate - support range of image formats, etc
+
 #[derive(Copy, Clone)]
 pub struct RGB {
     red: u8,
@@ -73,6 +75,10 @@ pub struct Image {
 impl Image {
     pub fn new(width: u32, height: u32) -> Image {
         Image{ pixels: vec![RGB::new(0, 0, 0); (width * height) as usize], width, height }
+    }
+
+    pub fn from_vec(pixels: Vec<RGB>, width: u32, height: u32) ->  Image {
+        Image{ pixels, width, height }
     }
 
     pub fn set(&mut self, row: u32, col: u32, rgb: RGB) {

@@ -1,21 +1,25 @@
 use vec3::Vec3;
 use ray::Ray;
 use material::Material;
+use std::sync::Arc;
 
 //#[derive(Debug)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Clone)]
 pub struct HitRecord {
     // FIXME: Improve naming
     pub t: f32,
     // FIXME: Improve naming
     pub p: Vec3,
     pub normal: Vec3,
-    // TODO: Make this Arc<Material> and a trait
-    pub material: Material
+    // What if this was a MaterialIndex? like what I'm planning on doing with SphereIndex/PrimativeIndex?
+    // Can this be sped up? Using unsafe + box?
+    pub material: Arc<Material>
 }
 
 impl HitRecord {
-    pub fn new(t: f32, p: Vec3, normal: Vec3, material: Material) -> HitRecord {
+    // FIXME: Change Material to Arc<MaterialT>?
+//    pub fn new(t: f32, p: Vec3, normal: Vec3, material: Material) -> HitRecord {
+    pub fn new(t: f32, p: Vec3, normal: Vec3, material: Arc<Material>) -> HitRecord {
         HitRecord{ t, p, normal, material }
     }
 }
@@ -54,7 +58,7 @@ impl Hitable for HitableList {
 
             let record = hitable.hit(ray, t_min, closest_so_far);
             if record.is_some() {
-                closest_so_far = record.unwrap().t;
+                closest_so_far = record.clone().unwrap().t;
                 temp_rec = record;
             }
         }

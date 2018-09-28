@@ -4,11 +4,6 @@ use hitable::HitRecord;
 use random::drand48;
 //use texture::Texture;
 
-// TODO Implement Material as a trait
-//pub trait Material {
-//    fn scatter(&self, ray: &Ray, hit_record: &HitRecord, attenuation: &Vec3, scattered: &Ray) -> bool;
-//}
-
 fn random_in_unit_sphere() -> Vec3 {
     loop {
         let p = 2.0 * Vec3::random() - Vec3::uniform(1.0);
@@ -41,67 +36,91 @@ fn schlick(cosine: f32, ref_idx: f32) -> f32 {
     r0 + (1.0 - r0) * (1.0 - cosine).powi(5)
 }
 
-fn lambert_scatter(albedo: &Vec3, ray: &Ray, hit_record: &HitRecord, attenuation: &mut Vec3, scattered: &mut Ray) -> bool {
-    let target = hit_record.p + hit_record.normal + random_in_unit_sphere();
-
-    *scattered = Ray::new(hit_record.p, target - hit_record.p, ray.time());
-    *attenuation = *albedo;
-    true
+pub trait Material {
+    fn scatter(&self, ray: &Ray, hit_record: &HitRecord, attenuation: &mut Vec3, scattered: &mut Ray) -> bool;
 }
 
-fn metal_scatter(albedo: &Vec3, fuzz: f32, ray: &Ray, hit_record: &HitRecord, attenuation: &mut Vec3, scattered: &mut Ray) -> bool {
-    let reflected = reflect(&ray.direction().unit(), &hit_record.normal);
-
-    let fuzz = if fuzz < 1.0 { fuzz } else { 1.0 };
-    *scattered = Ray::new(hit_record.p, reflected + fuzz * random_in_unit_sphere(), ray.time());
-    *attenuation = *albedo;
-
-    Vec3::dot(&scattered.direction(), &hit_record.normal) > 0.0
+pub struct Lambertian {
+    albedo: Vec3
 }
 
-fn dieletric_scatter(ref_idx: f32, ray_in: &Ray, hit_record: &HitRecord, attenuation: &mut Vec3, scattered: &mut Ray) -> bool {
-    *attenuation = Vec3::uniform(1.0);
-
-    let (outward_normal, ni_over_nt, cosine) = if Vec3::dot(&ray_in.direction(), &hit_record.normal) > 0.0 {
-        (-hit_record.normal,
-            ref_idx,
-            ref_idx * Vec3::dot(&ray_in.direction(), &hit_record.normal) / ray_in.direction().length())
-    } else {
-        (hit_record.normal,
-            1.0 / ref_idx,
-            -Vec3::dot(&ray_in.direction(), &hit_record.normal) / ray_in.direction().length())
-    };
-
-    let reflected = reflect(&ray_in.direction(), &hit_record.normal);
-    let (reflect_prob, refracted) = if let Some(refracted_ray) = refract(&ray_in.direction(), &outward_normal, ni_over_nt) {
-        (schlick(cosine, ref_idx), refracted_ray)
-    } else { (1.0, Vec3::zero()) };
-
-    if drand48() < reflect_prob {
-        *scattered = Ray::new(hit_record.p, reflected, ray_in.time());
-    } else {
-        *scattered = Ray::new(hit_record.p, refracted, ray_in.time());
+impl Lambertian {
+    // TODO: Make this return an Arc wrapped value to make code simpler
+    pub fn new(albedo: Vec3) -> Lambertian {
+        Lambertian{ albedo }
     }
-
-    true
 }
 
-// TODO: Rewrite this as a trait
-#[allow(dead_code)]
-#[derive(Debug, Copy, Clone)]
-pub enum Material {
-    Lambertian(Vec3),
-    Metal(Vec3, f32),
-    Dieletric(f32)
+impl Material for Lambertian {
+    fn scatter(&self, ray: &Ray, hit_record: &HitRecord, attenuation: &mut Vec3, scattered: &mut Ray) -> bool {
+        let target = hit_record.p + hit_record.normal + random_in_unit_sphere();
+
+        *scattered = Ray::new(hit_record.p, target - hit_record.p, ray.time());
+        *attenuation = self.albedo;
+        true
+    }
 }
 
-impl Material {
-    // TODO make helper/constructor methods
-    pub fn scatter(&self, ray: &Ray, hit_record: &HitRecord, attenuation: &mut Vec3, scattered: &mut Ray) -> bool {
-        match self {
-            Material::Lambertian(albedo) => lambert_scatter(&albedo, ray, hit_record, attenuation, scattered),
-            Material::Metal(albedo, fuzz) => metal_scatter(&albedo, *fuzz, ray, hit_record, attenuation, scattered),
-            Material::Dieletric(ref_idx) => dieletric_scatter(*ref_idx, ray, hit_record, attenuation, scattered)
+pub struct Metal {
+    albedo: Vec3,
+    fuzz: f32
+}
+
+impl Metal {
+    // TODO: Make this return an Arc wrapped value to make code simpler
+    pub fn new(albedo: Vec3, fuzz: f32) -> Metal {
+        Metal{ albedo, fuzz }
+    }
+}
+
+impl Material for Metal {
+    fn scatter(&self, ray: &Ray, hit_record: &HitRecord, attenuation: &mut Vec3, scattered: &mut Ray) -> bool {
+        let reflected = reflect(&ray.direction().unit(), &hit_record.normal);
+
+        let fuzz = if self.fuzz < 1.0 { self.fuzz } else { 1.0 };
+        *scattered = Ray::new(hit_record.p, reflected + fuzz * random_in_unit_sphere(), ray.time());
+        *attenuation = self.albedo;
+
+        Vec3::dot(&scattered.direction(), &hit_record.normal) > 0.0
+    }
+}
+
+pub struct Dieletric {
+    ref_idx: f32
+}
+
+impl Dieletric {
+    // TODO: Make this return an Arc wrapped value to make code simpler
+    pub fn new(ref_idx: f32) -> Dieletric {
+        Dieletric{ ref_idx }
+    }
+}
+
+impl Material for Dieletric {
+    fn scatter(&self, ray: &Ray, hit_record: &HitRecord, attenuation: &mut Vec3, scattered: &mut Ray) -> bool {
+        *attenuation = Vec3::uniform(1.0);
+
+        let (outward_normal, ni_over_nt, cosine) = if Vec3::dot(&ray.direction(), &hit_record.normal) > 0.0 {
+            (-hit_record.normal,
+             self.ref_idx,
+             self.ref_idx * Vec3::dot(&ray.direction(), &hit_record.normal) / ray.direction().length())
+        } else {
+            (hit_record.normal,
+             1.0 / self.ref_idx,
+             -Vec3::dot(&ray.direction(), &hit_record.normal) / ray.direction().length())
+        };
+
+        let reflected = reflect(&ray.direction(), &hit_record.normal);
+        let (reflect_prob, refracted) = if let Some(refracted_ray) = refract(&ray.direction(), &outward_normal, ni_over_nt) {
+            (schlick(cosine, self.ref_idx), refracted_ray)
+        } else { (1.0, Vec3::zero()) };
+
+        if drand48() < reflect_prob {
+            *scattered = Ray::new(hit_record.p, reflected, ray.time());
+        } else {
+            *scattered = Ray::new(hit_record.p, refracted, ray.time());
         }
+
+        true
     }
 }

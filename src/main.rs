@@ -1,7 +1,7 @@
 extern crate rand;
 extern crate time;
 extern crate xorshift;
-#[macro_use] extern crate lazy_static;
+//#[macro_use] extern crate lazy_static;
 extern crate rayon;
 
 mod image;
@@ -22,7 +22,7 @@ use ray::{Ray, RAY_COUNT};
 use hitable::{Hitable, HitableList};
 use sphere::{Sphere, MovingSphere};
 use camera::Camera;
-use material::Material;
+use material::{Lambertian, Metal, Dieletric};
 use random::drand48;
 
 use time::PreciseTime;
@@ -51,24 +51,6 @@ fn calculate_colour<T: Hitable>(ray: &Ray, world: &T, depth: u8) -> Vec3 {
     }
 }
 
-fn calculate_colour_threaded<T: Hitable>(ray: &Ray, world: Arc<T>, depth: u8) -> Vec3 {
-    if let Some(hit_record) = world.hit(ray, 0.001, std::f32::MAX) {
-        // TODO: Try removing the &mut arguments
-        let mut scattered = Ray::zero();
-        let mut attenuation = Vec3::zero();
-
-        if depth < 50 && hit_record.material.scatter(ray, &hit_record, &mut attenuation, &mut scattered) {
-            attenuation * calculate_colour_threaded(&scattered, world, depth + 1)
-        } else {
-            Vec3::zero()
-        }
-    } else {
-        let unit_direction = ray.direction().unit();
-        let t = 0.5 * (unit_direction.y() + 1.0);
-        (1.0 - t) * Vec3::uniform(1.0) + t * Vec3::new(0.5, 0.7, 1.0)
-    }
-}
-
 fn gamma(vec: Vec3) -> Vec3 {
     Vec3::new(vec.x().sqrt(), vec.y().sqrt(), vec.z().sqrt())
 }
@@ -77,11 +59,11 @@ fn gamma(vec: Vec3) -> Vec3 {
 //fn make_scene() -> HitableList<Sphere> {
 fn make_scene() -> HitableList {
     HitableList::new(vec![
-        Box::new(Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5, Material::Lambertian(Vec3::new(0.1, 0.2, 0.5)))),
-        Box::new(Sphere::new(Vec3::new(0.0, -100.5, -1.0), 100.0, Material::Lambertian(Vec3::new(0.8, 0.8, 0.0)))),
-        Box::new(Sphere::new(Vec3::new(1.0, 0.0, -1.0), 0.5, Material::Metal(Vec3::new(0.8, 0.6, 0.2), 0.3))),
-        Box::new(Sphere::new(Vec3::new(-1.0, 0.0, -1.0), 0.5, Material::Dieletric(1.5))),
-        Box::new(Sphere::new(Vec3::new(-1.0, 0.0, -1.0), -0.45, Material::Dieletric(1.5)))
+        Sphere::new_boxed(Vec3::new(0.0, 0.0, -1.0), 0.5, Arc::new(Lambertian::new(Vec3::new(0.1, 0.2, 0.5)))),
+        Sphere::new_boxed(Vec3::new(0.0, -100.5, -1.0), 100.0, Arc::new(Lambertian::new(Vec3::new(0.8, 0.8, 0.0)))),
+        Sphere::new_boxed(Vec3::new(1.0, 0.0, -1.0), 0.5, Arc::new(Metal::new(Vec3::new(0.8, 0.6, 0.2), 0.3))),
+        Sphere::new_boxed(Vec3::new(-1.0, 0.0, -1.0), 0.5, Arc::new(Dieletric::new(1.5))),
+        Sphere::new_boxed(Vec3::new(-1.0, 0.0, -1.0), -0.45, Arc::new(Dieletric::new(1.5)))
     ])
 }
 
@@ -93,7 +75,7 @@ fn make_scene() -> HitableList {
 #[allow(dead_code)]
 //fn make_random_scene() -> HitableList<Sphere> {
 fn make_random_scene() -> HitableList {
-    let mut spheres: Vec<Box<Hitable>> = vec![Box::new(Sphere::new(Vec3::new(0.0, -1000.0, 0.0), 1000.0, Material::Lambertian(Vec3::uniform(0.5))))];
+    let mut spheres: Vec<Box<Hitable>> = vec![Sphere::new_boxed(Vec3::new(0.0, -1000.0, 0.0), 1000.0, Arc::new(Lambertian::new(Vec3::uniform(0.5))))];
 
     for a in -11..11 {
         for b in -11..11 {
@@ -101,33 +83,33 @@ fn make_random_scene() -> HitableList {
             let center = Vec3::new(a as f32 + 0.9 * drand48(), 0.2, b as f32 + 0.9 * drand48());
             if (center - Vec3::new(4.0, 0.2, 0.0)).length() > 0.9 {
                 if choose_mat < 0.8 {
-                    spheres.push(Box::new(Sphere::new(center, 0.2,
-                                             Material::Lambertian(Vec3::new(drand48() * drand48(),
+                    spheres.push(Sphere::new_boxed(center, 0.2,
+                                             Arc::new(Lambertian::new(Vec3::new(drand48() * drand48(),
                                                            drand48() * drand48(),
                                                            drand48() * drand48())))));
                 } else if choose_mat < 0.95 {
-                    spheres.push(Box::new(Sphere::new(center, 0.2,
-                                             Material::Metal(Vec3::new(0.5 * (1.0 + drand48()),
+                    spheres.push(Sphere::new_boxed(center, 0.2,
+                                             Arc::new(Metal::new(Vec3::new(0.5 * (1.0 + drand48()),
                                                            0.5 * (1.0 + drand48()),
                                                            0.5 * (1.0 + drand48())),
                                                          0.5 * drand48()))));
                 } else {
-                    spheres.push(Box::new(Sphere::new(center, 0.2, Material::Dieletric(1.5))));
+                    spheres.push(Sphere::new_boxed(center, 0.2, Arc::new(Dieletric::new(1.5))));
                 }
             }
         }
     }
 
-    spheres.push(Box::new(Sphere::new(Vec3::new(0.0, 1.0, 0.0), 1.0, Material::Dieletric(1.5))));
-    spheres.push(Box::new(Sphere::new(Vec3::new(-4.0, 1.0, 0.0), 1.0, Material::Lambertian(Vec3::new(0.4, 0.2, 0.1)))));
-    spheres.push(Box::new(Sphere::new(Vec3::new(4.0, 1.0, 0.0), 1.0, Material::Metal(Vec3::new(0.7, 0.6, 0.5), 0.0))));
+    spheres.push(Sphere::new_boxed(Vec3::new(0.0, 1.0, 0.0), 1.0, Arc::new(Dieletric::new(1.5))));
+    spheres.push(Sphere::new_boxed(Vec3::new(-4.0, 1.0, 0.0), 1.0, Arc::new(Lambertian::new(Vec3::new(0.4, 0.2, 0.1)))));
+    spheres.push(Sphere::new_boxed(Vec3::new(4.0, 1.0, 0.0), 1.0, Arc::new(Metal::new(Vec3::new(0.7, 0.6, 0.5), 0.0))));
 
     HitableList::new(spheres)
 }
 
 #[allow(dead_code)]
 fn make_random_moving_scene() -> HitableList {
-    let mut spheres: Vec<Box<Hitable>> = vec![Box::new(Sphere::new(Vec3::new(0.0, -1000.0, 0.0), 1000.0, Material::Lambertian(Vec3::uniform(0.5))))];
+    let mut spheres: Vec<Box<Hitable>> = vec![Sphere::new_boxed(Vec3::new(0.0, -1000.0, 0.0), 1000.0, Arc::new(Lambertian::new(Vec3::uniform(0.5))))];
 
     for a in -11..11 {
         for b in -11..11 {
@@ -135,27 +117,27 @@ fn make_random_moving_scene() -> HitableList {
             let center = Vec3::new(a as f32 + 0.9 * drand48(), 0.2, b as f32 + 0.9 * drand48());
             if (center - Vec3::new(4.0, 0.2, 0.0)).length() > 0.9 {
                 if choose_mat < 0.8 {
-                    spheres.push(Box::new(MovingSphere::new(center, center + Vec3::new(0.0, 0.5 * drand48(), 0.0),
+                    spheres.push(MovingSphere::new_boxed(center, center + Vec3::new(0.0, 0.5 * drand48(), 0.0),
                                              0.0, 1.0, 0.2,
-                                             Material::Lambertian(Vec3::new(drand48() * drand48(),
+                                             Arc::new(Lambertian::new(Vec3::new(drand48() * drand48(),
                                                            drand48() * drand48(),
                                                            drand48() * drand48())))));
                 } else if choose_mat < 0.95 {
-                    spheres.push(Box::new(Sphere::new(center, 0.2,
-                                             Material::Metal(Vec3::new(0.5 * (1.0 + drand48()),
+                    spheres.push(Sphere::new_boxed(center, 0.2,
+                                             Arc::new(Metal::new(Vec3::new(0.5 * (1.0 + drand48()),
                                                            0.5 * (1.0 + drand48()),
                                                            0.5 * (1.0 + drand48())),
                                                          0.5 * drand48()))));
                 } else {
-                    spheres.push(Box::new(Sphere::new(center, 0.2, Material::Dieletric(1.5))));
+                    spheres.push(Sphere::new_boxed(center, 0.2, Arc::new(Dieletric::new(1.5))));
                 }
             }
         }
     }
 
-    spheres.push(Box::new(Sphere::new(Vec3::new(0.0, 1.0, 0.0), 1.0, Material::Dieletric(1.5))));
-    spheres.push(Box::new(Sphere::new(Vec3::new(-4.0, 1.0, 0.0), 1.0, Material::Lambertian(Vec3::new(0.4, 0.2, 0.1)))));
-    spheres.push(Box::new(Sphere::new(Vec3::new(4.0, 1.0, 0.0), 1.0, Material::Metal(Vec3::new(0.7, 0.6, 0.5), 0.0))));
+    spheres.push(Sphere::new_boxed(Vec3::new(0.0, 1.0, 0.0), 1.0, Arc::new(Dieletric::new((1.5)))));
+    spheres.push(Sphere::new_boxed(Vec3::new(-4.0, 1.0, 0.0), 1.0, Arc::new(Lambertian::new(Vec3::new(0.4, 0.2, 0.1)))));
+    spheres.push(Sphere::new_boxed(Vec3::new(4.0, 1.0, 0.0), 1.0, Arc::new(Metal::new(Vec3::new(0.7, 0.6, 0.5), 0.0))));
 
     HitableList::new(spheres)
 }
@@ -170,7 +152,7 @@ fn make_camera(nx: u32, ny: u32) -> Camera {
 
 fn calculate_pixel<T: Hitable>(index: usize, width: usize, height: usize, samples: usize, world: &T, cam: &Camera) -> RGB {
     let col = index % width;
-    let row = index / width;
+    let row = height - 1 - (index / width);
 
     let mut colour = Vec3::zero();
     for _ in 0..samples {
@@ -180,25 +162,6 @@ fn calculate_pixel<T: Hitable>(index: usize, width: usize, height: usize, sample
 
         // TODO: Have a list of typed buffers?
         colour += calculate_colour(&r, world, 0);
-    }
-
-    colour = gamma(colour / samples as f32);
-
-    RGB::new_scaled(colour.r(), colour.g(), colour.b())
-}
-
-fn calculate_pixel_threaded<T: Hitable>(index: usize, width: usize, height: usize, samples: usize, world: Arc<T>, cam: Arc<Camera>) -> RGB {
-    let col = index % width;
-    let row = index / width;
-
-    let mut colour = Vec3::zero();
-    for _ in 0..samples {
-        let u = (col as f32 + drand48()) / width as f32;
-        let v = (row as f32 + drand48()) / height as f32;
-        let r = cam.get_ray(u, v);
-
-        // TODO: Have a list of typed buffers?
-        colour += calculate_colour_threaded(&r, world.clone(), 0);
     }
 
     colour = gamma(colour / samples as f32);
@@ -216,16 +179,11 @@ fn run() {
 
     let start = PreciseTime::now();
 
-    // TODO: Decide whether to use Arc version or stick with the unsafe impl of Send/Sync
     // TODO: Implement some type for holding primatives/hitable objects
-
-//    let world = Arc::new(world);
-//    let cam  = Arc::new(cam);
 
     let pixels: Vec<RGB> = (0..nx*ny)
         .into_par_iter()
         .map(|idx| calculate_pixel(idx, nx, ny, ns, &world, &cam))
-//        .map(|idx| calculate_pixel_threaded(idx, nx, ny, ns, world.clone(), cam.clone()))
         .collect();
     let image = Image::from_vec(pixels, nx as u32, ny as u32);
 

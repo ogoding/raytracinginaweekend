@@ -1,4 +1,4 @@
-use super::rand::random;
+//use super::rand::random;
 use std::cell::RefCell;
 use time::precise_time_ns;
 use xorshift::{Rng, SeedableRng, Xorshift128};

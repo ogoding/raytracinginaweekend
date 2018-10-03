@@ -9,24 +9,23 @@ pub struct Sphere {
     center: Vec3,
     radius: f32,
     // What if this was a MaterialIndex? like what I'm planning on doing with SphereIndex/PrimativeIndex?
-    // Can this be sped up? Using unsafe + box?
-    material: Arc<Material>
+    material: Box<Material>
 }
 
+//impl <'mat> Sphere<'mat> {
 impl Sphere {
-//    pub fn new(center: Vec3, radius: f32, material: Material) -> Sphere {
-    pub fn new(center: Vec3, radius: f32, material: Arc<Material>) -> Sphere {
+    pub fn new(center: Vec3, radius: f32, material: Box<Material>) -> Sphere {
         Sphere{ center, radius, material }
     }
 
-    pub fn new_boxed(center: Vec3, radius: f32, material: Arc<Material>) -> Box<Sphere> {
+    pub fn new_boxed(center: Vec3, radius: f32, material: Box<Material>) -> Box<Sphere> {
         Box::new(Sphere::new(center, radius, material))
     }
 
     #[inline(always)]
     pub fn create_hit_record(&self, ray: &Ray, t: f32) -> HitRecord {
         let p = ray.point_at_parameter(t);
-        HitRecord::new(t, p, (p - self.center) / self.radius, self.material.clone())
+        HitRecord::new(t, p, (p - self.center) / self.radius, self.material.as_ref())
     }
 }
 
@@ -66,17 +65,17 @@ pub struct MovingSphere {
     center0: Vec3,
     center1: Vec3,
     radius: f32,
-    material: Arc<Material>,
+    material: Box<Material>,
     time0: f32,
     time1: f32
 }
 
 impl MovingSphere {
-    pub fn new(center0: Vec3, center1: Vec3, t0: f32, t1: f32, radius: f32, material: Arc<Material>) -> MovingSphere {
+    pub fn new(center0: Vec3, center1: Vec3, t0: f32, t1: f32, radius: f32, material: Box<Material>) -> MovingSphere {
         MovingSphere{ center0, center1, radius, material, time0: t0, time1: t1 }
     }
 
-    pub fn new_boxed(center0: Vec3, center1: Vec3, t0: f32, t1: f32, radius: f32, material: Arc<Material>) -> Box<MovingSphere> {
+    pub fn new_boxed(center0: Vec3, center1: Vec3, t0: f32, t1: f32, radius: f32, material: Box<Material>) -> Box<MovingSphere> {
         Box::new(MovingSphere::new(center0, center1, t0, t1, radius, material))
     }
 
@@ -86,7 +85,7 @@ impl MovingSphere {
 //        let (u, v) = get_sphere_uv(&(record.p - self.center) / self.radius);
 //        record.u = u;
 //        record.v = v;
-        HitRecord::new(t, p, (p - self.center(ray.time())) / self.radius, self.material.clone())
+        HitRecord::new(t, p, (p - self.center(ray.time())) / self.radius, self.material.as_ref())
     }
 
     #[inline]

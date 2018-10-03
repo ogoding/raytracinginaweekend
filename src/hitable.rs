@@ -5,21 +5,18 @@ use std::sync::Arc;
 
 //#[derive(Debug)]
 #[derive(Clone)]
-pub struct HitRecord {
+pub struct HitRecord<'mat> {
     // FIXME: Improve naming
     pub t: f32,
     // FIXME: Improve naming
     pub p: Vec3,
     pub normal: Vec3,
     // What if this was a MaterialIndex? like what I'm planning on doing with SphereIndex/PrimativeIndex?
-    // Can this be sped up? Using unsafe + box?
-    pub material: Arc<Material>
+    pub material: &'mat Material
 }
 
-impl HitRecord {
-    // FIXME: Change Material to Arc<MaterialT>?
-//    pub fn new(t: f32, p: Vec3, normal: Vec3, material: Material) -> HitRecord {
-    pub fn new(t: f32, p: Vec3, normal: Vec3, material: Arc<Material>) -> HitRecord {
+impl <'mat> HitRecord<'mat> {
+    pub fn new(t: f32, p: Vec3, normal: Vec3, material: &'mat Material) -> HitRecord {
         HitRecord{ t, p, normal, material }
     }
 }

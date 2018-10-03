@@ -1,3 +1,5 @@
+//#![feature(nll)]
+
 extern crate rand;
 extern crate time;
 extern crate xorshift;
@@ -22,7 +24,7 @@ use ray::{Ray, RAY_COUNT};
 use hitable::{Hitable, HitableList};
 use sphere::{Sphere, MovingSphere};
 use camera::Camera;
-use material::{Lambertian, Metal, Dieletric};
+use material::{Material, Lambertian, Metal, Dieletric};
 use random::drand48;
 
 use time::PreciseTime;
@@ -59,11 +61,11 @@ fn gamma(vec: Vec3) -> Vec3 {
 //fn make_scene() -> HitableList<Sphere> {
 fn make_scene() -> HitableList {
     HitableList::new(vec![
-        Sphere::new_boxed(Vec3::new(0.0, 0.0, -1.0), 0.5, Arc::new(Lambertian::new(Vec3::new(0.1, 0.2, 0.5)))),
-        Sphere::new_boxed(Vec3::new(0.0, -100.5, -1.0), 100.0, Arc::new(Lambertian::new(Vec3::new(0.8, 0.8, 0.0)))),
-        Sphere::new_boxed(Vec3::new(1.0, 0.0, -1.0), 0.5, Arc::new(Metal::new(Vec3::new(0.8, 0.6, 0.2), 0.3))),
-        Sphere::new_boxed(Vec3::new(-1.0, 0.0, -1.0), 0.5, Arc::new(Dieletric::new(1.5))),
-        Sphere::new_boxed(Vec3::new(-1.0, 0.0, -1.0), -0.45, Arc::new(Dieletric::new(1.5)))
+        Sphere::new_boxed(Vec3::new(0.0, 0.0, -1.0), 0.5, Box::new(Lambertian::new(Vec3::new(0.1, 0.2, 0.5)))),
+        Sphere::new_boxed(Vec3::new(0.0, -100.5, -1.0), 100.0, Box::new(Lambertian::new(Vec3::new(0.8, 0.8, 0.0)))),
+        Sphere::new_boxed(Vec3::new(1.0, 0.0, -1.0), 0.5, Box::new(Metal::new(Vec3::new(0.8, 0.6, 0.2), 0.3))),
+        Sphere::new_boxed(Vec3::new(-1.0, 0.0, -1.0), 0.5, Box::new(Dieletric::new(1.5))),
+        Sphere::new_boxed(Vec3::new(-1.0, 0.0, -1.0), -0.45, Box::new(Dieletric::new(1.5)))
     ])
 }
 
@@ -75,7 +77,7 @@ fn make_scene() -> HitableList {
 #[allow(dead_code)]
 //fn make_random_scene() -> HitableList<Sphere> {
 fn make_random_scene() -> HitableList {
-    let mut spheres: Vec<Box<Hitable>> = vec![Sphere::new_boxed(Vec3::new(0.0, -1000.0, 0.0), 1000.0, Arc::new(Lambertian::new(Vec3::uniform(0.5))))];
+    let mut spheres: Vec<Box<Hitable>> = vec![Sphere::new_boxed(Vec3::new(0.0, -1000.0, 0.0), 1000.0, Box::new(Lambertian::new(Vec3::uniform(0.5))))];
 
     for a in -11..11 {
         for b in -11..11 {
@@ -84,32 +86,32 @@ fn make_random_scene() -> HitableList {
             if (center - Vec3::new(4.0, 0.2, 0.0)).length() > 0.9 {
                 if choose_mat < 0.8 {
                     spheres.push(Sphere::new_boxed(center, 0.2,
-                                             Arc::new(Lambertian::new(Vec3::new(drand48() * drand48(),
+                                             Box::new(Lambertian::new(Vec3::new(drand48() * drand48(),
                                                            drand48() * drand48(),
                                                            drand48() * drand48())))));
                 } else if choose_mat < 0.95 {
                     spheres.push(Sphere::new_boxed(center, 0.2,
-                                             Arc::new(Metal::new(Vec3::new(0.5 * (1.0 + drand48()),
+                                             Box::new(Metal::new(Vec3::new(0.5 * (1.0 + drand48()),
                                                            0.5 * (1.0 + drand48()),
                                                            0.5 * (1.0 + drand48())),
                                                          0.5 * drand48()))));
                 } else {
-                    spheres.push(Sphere::new_boxed(center, 0.2, Arc::new(Dieletric::new(1.5))));
+                    spheres.push(Sphere::new_boxed(center, 0.2, Box::new(Dieletric::new(1.5))));
                 }
             }
         }
     }
 
-    spheres.push(Sphere::new_boxed(Vec3::new(0.0, 1.0, 0.0), 1.0, Arc::new(Dieletric::new(1.5))));
-    spheres.push(Sphere::new_boxed(Vec3::new(-4.0, 1.0, 0.0), 1.0, Arc::new(Lambertian::new(Vec3::new(0.4, 0.2, 0.1)))));
-    spheres.push(Sphere::new_boxed(Vec3::new(4.0, 1.0, 0.0), 1.0, Arc::new(Metal::new(Vec3::new(0.7, 0.6, 0.5), 0.0))));
+    spheres.push(Sphere::new_boxed(Vec3::new(0.0, 1.0, 0.0), 1.0, Box::new(Dieletric::new(1.5))));
+    spheres.push(Sphere::new_boxed(Vec3::new(-4.0, 1.0, 0.0), 1.0, Box::new(Lambertian::new(Vec3::new(0.4, 0.2, 0.1)))));
+    spheres.push(Sphere::new_boxed(Vec3::new(4.0, 1.0, 0.0), 1.0, Box::new(Metal::new(Vec3::new(0.7, 0.6, 0.5), 0.0))));
 
     HitableList::new(spheres)
 }
 
 #[allow(dead_code)]
 fn make_random_moving_scene() -> HitableList {
-    let mut spheres: Vec<Box<Hitable>> = vec![Sphere::new_boxed(Vec3::new(0.0, -1000.0, 0.0), 1000.0, Arc::new(Lambertian::new(Vec3::uniform(0.5))))];
+    let mut spheres: Vec<Box<Hitable>> = vec![Sphere::new_boxed(Vec3::new(0.0, -1000.0, 0.0), 1000.0, Box::new(Lambertian::new(Vec3::uniform(0.5))))];
 
     for a in -11..11 {
         for b in -11..11 {
@@ -119,25 +121,25 @@ fn make_random_moving_scene() -> HitableList {
                 if choose_mat < 0.8 {
                     spheres.push(MovingSphere::new_boxed(center, center + Vec3::new(0.0, 0.5 * drand48(), 0.0),
                                              0.0, 1.0, 0.2,
-                                             Arc::new(Lambertian::new(Vec3::new(drand48() * drand48(),
+                                             Box::new(Lambertian::new(Vec3::new(drand48() * drand48(),
                                                            drand48() * drand48(),
                                                            drand48() * drand48())))));
                 } else if choose_mat < 0.95 {
                     spheres.push(Sphere::new_boxed(center, 0.2,
-                                             Arc::new(Metal::new(Vec3::new(0.5 * (1.0 + drand48()),
+                                             Box::new(Metal::new(Vec3::new(0.5 * (1.0 + drand48()),
                                                            0.5 * (1.0 + drand48()),
                                                            0.5 * (1.0 + drand48())),
                                                          0.5 * drand48()))));
                 } else {
-                    spheres.push(Sphere::new_boxed(center, 0.2, Arc::new(Dieletric::new(1.5))));
+                    spheres.push(Sphere::new_boxed(center, 0.2, Box::new(Dieletric::new(1.5))));
                 }
             }
         }
     }
 
-    spheres.push(Sphere::new_boxed(Vec3::new(0.0, 1.0, 0.0), 1.0, Arc::new(Dieletric::new((1.5)))));
-    spheres.push(Sphere::new_boxed(Vec3::new(-4.0, 1.0, 0.0), 1.0, Arc::new(Lambertian::new(Vec3::new(0.4, 0.2, 0.1)))));
-    spheres.push(Sphere::new_boxed(Vec3::new(4.0, 1.0, 0.0), 1.0, Arc::new(Metal::new(Vec3::new(0.7, 0.6, 0.5), 0.0))));
+    spheres.push(Sphere::new_boxed(Vec3::new(0.0, 1.0, 0.0), 1.0, Box::new(Dieletric::new(1.5))));
+    spheres.push(Sphere::new_boxed(Vec3::new(-4.0, 1.0, 0.0), 1.0, Box::new(Lambertian::new(Vec3::new(0.4, 0.2, 0.1)))));
+    spheres.push(Sphere::new_boxed(Vec3::new(4.0, 1.0, 0.0), 1.0, Box::new(Metal::new(Vec3::new(0.7, 0.6, 0.5), 0.0))));
 
     HitableList::new(spheres)
 }

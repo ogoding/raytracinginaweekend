@@ -7,10 +7,15 @@ authors = ["Oliver Goding <olivergoding@gmail.com>"]
 rand = "0.5.0"
 time = "0.1.40"
 xorshift = "0.1.3"
-#image = "0.19.0"
 if_chain = "0.1.2"
-#lazy_static = "1.0.1"
+lazy_static = "1.0.1"
 rayon = "1.0.2"
+image = "0.20.0"
+
+# TODO: Use anymap of vecs to store geometry (and potentially materials/textures/etc)
+# TODO: Implement my own anymap that has Send/Sync so that rayon can work
+#anymap = "0.12.1"
+# TODO: Try using the f16 crate for vec3 and other floats
 
 [profile.release]
 debug = true

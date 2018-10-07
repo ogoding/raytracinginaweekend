@@ -2,7 +2,7 @@ use vec3::Vec3;
 use ray::Ray;
 use hitable::HitRecord;
 use random::drand48;
-//use texture::Texture;
+use texture::{Texture, ConstantTexture};
 
 fn random_in_unit_sphere() -> Vec3 {
     loop {
@@ -38,6 +38,9 @@ fn schlick(cosine: f32, ref_idx: f32) -> f32 {
 
 pub trait Material {
     fn scatter(&self, ray: &Ray, hit_record: &HitRecord, attenuation: &mut Vec3, scattered: &mut Ray) -> bool;
+    fn emitted(&self, u: f32, v: f32, p: &Vec3) -> Vec3 {
+        Vec3::zero()
+    }
 }
 
 pub struct Lambertian {
@@ -45,7 +48,6 @@ pub struct Lambertian {
 }
 
 impl Lambertian {
-    // TODO: Make this return an Arc wrapped value to make code simpler
     pub fn new(albedo: Vec3) -> Lambertian {
         Lambertian{ albedo }
     }
@@ -61,13 +63,40 @@ impl Material for Lambertian {
     }
 }
 
+pub struct LambertianTextured<T: Texture> {
+    // TODO: Change this to be a Texture ptr - may be a bit slower but will allow sharing of textures across multiple materials
+    // TODO: OR just implement Clone on texture and/or material
+    albedo: T
+}
+
+impl <T: Texture> LambertianTextured<T> {
+    pub fn new(albedo: T) -> LambertianTextured<T> {
+        LambertianTextured{ albedo }
+    }
+}
+
+impl LambertianTextured<ConstantTexture> {
+    pub fn new_solid(colour: Vec3) -> LambertianTextured<ConstantTexture> {
+        LambertianTextured{ albedo: ConstantTexture::new(colour) }
+    }
+}
+
+impl <T: Texture> Material for LambertianTextured<T> {
+    fn scatter(&self, ray: &Ray, hit_record: &HitRecord, attenuation: &mut Vec3, scattered: &mut Ray) -> bool {
+        let target = hit_record.p + hit_record.normal + random_in_unit_sphere();
+
+        *scattered = Ray::new(hit_record.p, target - hit_record.p, ray.time());
+        *attenuation = self.albedo.value(0.0, 0.0, &hit_record.p);
+        true
+    }
+}
+
 pub struct Metal {
     albedo: Vec3,
     fuzz: f32
 }
 
 impl Metal {
-    // TODO: Make this return an Arc wrapped value to make code simpler
     pub fn new(albedo: Vec3, fuzz: f32) -> Metal {
         Metal{ albedo, fuzz }
     }
@@ -90,7 +119,6 @@ pub struct Dieletric {
 }
 
 impl Dieletric {
-    // TODO: Make this return an Arc wrapped value to make code simpler
     pub fn new(ref_idx: f32) -> Dieletric {
         Dieletric{ ref_idx }
     }
@@ -121,6 +149,44 @@ impl Material for Dieletric {
             *scattered = Ray::new(hit_record.p, refracted, ray.time());
         }
 
+        true
+    }
+}
+
+pub struct DiffuseLight<T: Texture> {
+    emit: T
+}
+
+impl <T: Texture> DiffuseLight<T> {
+    pub fn new(emit: T) -> DiffuseLight<T> {
+        DiffuseLight{ emit }
+    }
+}
+
+impl <T: Texture> Material for DiffuseLight<T> {
+    fn scatter(&self, ray: &Ray, hit_record: &HitRecord, attenuation: &mut Vec3, scattered: &mut Ray) -> bool {
+        false
+    }
+
+    fn emitted(&self, u: f32, v: f32, p: &Vec3) -> Vec3 {
+        self.emit.value(u, v, p)
+    }
+}
+
+pub struct Isotropic<T: Texture> {
+    albedo: T
+}
+
+impl <T: Texture> Isotropic<T> {
+    pub fn new(albedo: T) -> Isotropic<T> {
+        Isotropic{ albedo }
+    }
+}
+
+impl <T: Texture> Material for Isotropic<T> {
+    fn scatter(&self, ray: &Ray, hit_record: &HitRecord, attenuation: &mut Vec3, scattered: &mut Ray) -> bool {
+        *attenuation = self.albedo.value(hit_record.u, hit_record.v, &hit_record.p);
+        *scattered = Ray::new(hit_record.p, random_in_unit_sphere(), ray.time());
         true
     }
 }

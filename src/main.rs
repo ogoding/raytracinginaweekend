@@ -3,8 +3,9 @@
 extern crate rand;
 extern crate time;
 extern crate xorshift;
-//#[macro_use] extern crate lazy_static;
+#[macro_use] extern crate lazy_static;
 extern crate rayon;
+extern crate image as imagers;
 
 mod image;
 mod vec3;
@@ -14,22 +15,27 @@ mod sphere;
 mod camera;
 mod material;
 mod random;
-//mod texture;
-//mod perlin;
+mod texture;
+mod perlin;
+mod aabb;
+mod aarect;
+//mod volume;
 
 use vec3::Vec3;
 //use image::{PixelPusher, Image, RGB};
 use image::{Image, RGB};
 use ray::{Ray, RAY_COUNT};
-use hitable::{Hitable, HitableList};
+use hitable::{Hitable, HitableList, FlipNormals};
 use sphere::{Sphere, MovingSphere};
 use camera::Camera;
-use material::{Material, Lambertian, Metal, Dieletric};
+use aarect::{XYRect, XZRect, YZRect};
+use material::{Material, Lambertian, LambertianTextured, Metal, Dieletric, DiffuseLight};
+use texture::{ConstantTexture, CheckerTexture, PerlinTexture, ScaledPerlinTexture, ScaledTurbulencePerlinTexture, ImageTexture};
+//use volume::ConstantMedium;
 use random::drand48;
 
 use time::PreciseTime;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 
 use rayon::prelude::*;
 
@@ -40,16 +46,20 @@ fn calculate_colour<T: Hitable>(ray: &Ray, world: &T, depth: u8) -> Vec3 {
         // TODO: Try removing the &mut arguments
         let mut scattered = Ray::zero();
         let mut attenuation = Vec3::zero();
+        let emitted = hit_record.material.emitted(hit_record.u, hit_record.v, &hit_record.p);
 
         if depth < 50 && hit_record.material.scatter(ray, &hit_record, &mut attenuation, &mut scattered) {
-            attenuation * calculate_colour(&scattered, world, depth + 1)
+            // TODO: Can this be a fused multiply/add?
+            emitted +  attenuation * calculate_colour(&scattered, world, depth + 1)
         } else {
-            Vec3::zero()
+            emitted
+//            Vec3::zero()
         }
     } else {
-        let unit_direction = ray.direction().unit();
-        let t = 0.5 * (unit_direction.y() + 1.0);
-        (1.0 - t) * Vec3::uniform(1.0) + t * Vec3::new(0.5, 0.7, 1.0)
+//        let unit_direction = ray.direction().unit();
+//        let t = 0.5 * (unit_direction.y() + 1.0);
+//        (1.0 - t) * Vec3::uniform(1.0) + t * Vec3::new(0.5, 0.7, 1.0)
+        Vec3::zero()
     }
 }
 
@@ -59,25 +69,24 @@ fn gamma(vec: Vec3) -> Vec3 {
 
 #[allow(dead_code)]
 //fn make_scene() -> HitableList<Sphere> {
-fn make_scene() -> HitableList {
-    HitableList::new(vec![
+fn make_scene(nx: u32, ny: u32) -> (HitableList, Camera) {
+    let world = HitableList::new(vec![
         Sphere::new_boxed(Vec3::new(0.0, 0.0, -1.0), 0.5, Box::new(Lambertian::new(Vec3::new(0.1, 0.2, 0.5)))),
         Sphere::new_boxed(Vec3::new(0.0, -100.5, -1.0), 100.0, Box::new(Lambertian::new(Vec3::new(0.8, 0.8, 0.0)))),
         Sphere::new_boxed(Vec3::new(1.0, 0.0, -1.0), 0.5, Box::new(Metal::new(Vec3::new(0.8, 0.6, 0.2), 0.3))),
         Sphere::new_boxed(Vec3::new(-1.0, 0.0, -1.0), 0.5, Box::new(Dieletric::new(1.5))),
         Sphere::new_boxed(Vec3::new(-1.0, 0.0, -1.0), -0.45, Box::new(Dieletric::new(1.5)))
-    ])
-}
+    ]);
 
-//#[allow(dead_code)]
-//fn make_perlin_scene() -> HitableList<Sphere> {
-//
-//}
+    (world, make_default_camera(nx, ny))
+}
 
 #[allow(dead_code)]
 //fn make_random_scene() -> HitableList<Sphere> {
-fn make_random_scene() -> HitableList {
-    let mut spheres: Vec<Box<Hitable>> = vec![Sphere::new_boxed(Vec3::new(0.0, -1000.0, 0.0), 1000.0, Box::new(Lambertian::new(Vec3::uniform(0.5))))];
+fn make_random_scene(nx: u32, ny: u32) -> (HitableList, Camera) {
+//    let mut spheres: Vec<Box<Hitable>> = vec![Sphere::new_boxed(Vec3::new(0.0, -1000.0, 0.0), 1000.0, Box::new(Lambertian::new(Vec3::uniform(0.5))))];
+//    let mut spheres: Vec<Box<Hitable>> = vec![Sphere::new_boxed(Vec3::new(0.0, -1000.0, 0.0), 1000.0, Box::new(LambertianTextured::new(ConstantTexture::new(Vec3::uniform(0.5)))))];
+    let mut spheres: Vec<Box<Hitable>> = vec![Sphere::new_boxed(Vec3::new(0.0, -1000.0, 0.0), 1000.0, Box::new(LambertianTextured::new(CheckerTexture::new_solid(Vec3::new(0.2, 0.3, 0.1), Vec3::uniform(0.9)))))];
 
     for a in -11..11 {
         for b in -11..11 {
@@ -106,12 +115,14 @@ fn make_random_scene() -> HitableList {
     spheres.push(Sphere::new_boxed(Vec3::new(-4.0, 1.0, 0.0), 1.0, Box::new(Lambertian::new(Vec3::new(0.4, 0.2, 0.1)))));
     spheres.push(Sphere::new_boxed(Vec3::new(4.0, 1.0, 0.0), 1.0, Box::new(Metal::new(Vec3::new(0.7, 0.6, 0.5), 0.0))));
 
-    HitableList::new(spheres)
+    (HitableList::new(spheres), make_default_camera(nx, ny))
 }
 
 #[allow(dead_code)]
-fn make_random_moving_scene() -> HitableList {
-    let mut spheres: Vec<Box<Hitable>> = vec![Sphere::new_boxed(Vec3::new(0.0, -1000.0, 0.0), 1000.0, Box::new(Lambertian::new(Vec3::uniform(0.5))))];
+fn make_random_moving_scene(nx: u32, ny: u32) -> (HitableList, Camera) {
+//    let mut spheres: Vec<Box<Hitable>> = vec![Sphere::new_boxed(Vec3::new(0.0, -1000.0, 0.0), 1000.0, Box::new(Lambertian::new(Vec3::uniform(0.5))))];
+//    let mut spheres: Vec<Box<Hitable>> = vec![Sphere::new_boxed(Vec3::new(0.0, -1000.0, 0.0), 1000.0, Box::new(LambertianTextured::new(ConstantTexture::new(Vec3::uniform(0.5)))))];
+    let mut spheres: Vec<Box<Hitable>> = vec![Sphere::new_boxed(Vec3::new(0.0, -1000.0, 0.0), 1000.0, Box::new(LambertianTextured::new(CheckerTexture::new_solid(Vec3::new(0.2, 0.3, 0.1), Vec3::uniform(0.9)))))];
 
     for a in -11..11 {
         for b in -11..11 {
@@ -141,10 +152,120 @@ fn make_random_moving_scene() -> HitableList {
     spheres.push(Sphere::new_boxed(Vec3::new(-4.0, 1.0, 0.0), 1.0, Box::new(Lambertian::new(Vec3::new(0.4, 0.2, 0.1)))));
     spheres.push(Sphere::new_boxed(Vec3::new(4.0, 1.0, 0.0), 1.0, Box::new(Metal::new(Vec3::new(0.7, 0.6, 0.5), 0.0))));
 
-    HitableList::new(spheres)
+    (HitableList::new(spheres), make_default_camera(nx, ny))
 }
 
-fn make_camera(nx: u32, ny: u32) -> Camera {
+#[allow(dead_code)]
+fn make_two_spheres_scene(nx: u32, ny: u32) -> (HitableList, Camera) {
+    // TODO: Remove duplication
+    let checker = CheckerTexture::new_solid(Vec3::new(0.2, 0.3, 0.1), Vec3::uniform(0.9));
+    let checker2 = CheckerTexture::new_solid(Vec3::new(0.2, 0.3, 0.1), Vec3::uniform(0.9));
+
+    let world = HitableList::new(
+    vec![Sphere::new_boxed(Vec3::new(0.0, -10.0, 0.0), 10.0, Box::new(LambertianTextured::new(checker))),
+         Sphere::new_boxed(Vec3::new(0.0, 10.0, 0.0), 10.0, Box::new(LambertianTextured::new(checker2)))]);
+
+    (world, make_default_camera(nx, ny))
+}
+
+#[allow(dead_code)]
+fn make_two_perlin_spheres_scene(nx: u32, ny: u32) -> (HitableList, Camera) {
+    // TODO: Remove duplication
+//    let checker = PerlinTexture{};
+//    let checker2 = PerlinTexture{};
+//    let checker = ScaledPerlinTexture::new(1.0);
+//    let checker2 = ScaledPerlinTexture::new(1.0);
+    let checker = ScaledTurbulencePerlinTexture::new(4.0);
+    let checker2 = ScaledTurbulencePerlinTexture::new(4.0);
+
+    let world = HitableList::new(
+        vec![Sphere::new_boxed(Vec3::new(0.0, -1000.0, 0.0), 1000.0, Box::new(LambertianTextured::new(checker))),
+             Sphere::new_boxed(Vec3::new(0.0, 2.0, 0.0), 2.0, Box::new(LambertianTextured::new(checker2)))]);
+    (world, make_default_camera(nx, ny))
+}
+
+#[allow(dead_code)]
+fn make_earth_scene(nx: u32, ny: u32) -> (HitableList, Camera) {
+    let world = HitableList::new(vec![
+        Sphere::new_boxed(Vec3::zero(), 2.0, Box::new(LambertianTextured::new(ImageTexture::new("earthmap.jpg"))))
+    ]);
+
+    (world, make_default_camera(nx, ny))
+}
+
+#[allow(dead_code)]
+fn make_simple_light_scene(nx: u32, ny: u32) -> (HitableList, Camera) {
+    // TODO: Remove duplication
+    let checker = ScaledTurbulencePerlinTexture::new(4.0);
+    let checker2 = ScaledTurbulencePerlinTexture::new(4.0);
+
+    let world = HitableList::new(vec![
+        Sphere::new_boxed(Vec3::new(0.0, -1000.0, 0.0), 1000.0, Box::new(LambertianTextured::new(checker))),
+        Sphere::new_boxed(Vec3::new(0.0, 2.0, 0.0), 2.0, Box::new(LambertianTextured::new(checker2))),
+        Sphere::new_boxed(Vec3::new(0.0, 7.0, 0.0), 2.0, Box::new(DiffuseLight::new(ConstantTexture::new(Vec3::uniform(4.0))))),
+        XYRect::new_boxed(3.0, 5.0, 1.0, 3.0, -2.0, Box::new(DiffuseLight::new(ConstantTexture::new(Vec3::uniform(4.0)))))
+    ]);
+
+//    (world, make_default_camera(nx, ny))
+    (world, make_camera(Vec3::new(18.0, 5.0, 3.0), Vec3::new(0.0, 0.0, 0.0), 40.0, nx as u32, ny as u32, 0.1, 10.0))
+}
+
+#[allow(dead_code)]
+fn make_cornell_box(nx: u32, ny: u32) -> (HitableList, Camera) {
+    let red = LambertianTextured::new(ConstantTexture::new(Vec3::new(0.65, 0.05, 0.05)));
+    let green= LambertianTextured::new(ConstantTexture::new(Vec3::new(0.12, 0.45, 0.15)));
+    // TODO: Remove duplication
+    let white = LambertianTextured::new(ConstantTexture::new(Vec3::uniform(0.73)));
+    let white2 = LambertianTextured::new(ConstantTexture::new(Vec3::uniform(0.73)));
+    let white3 = LambertianTextured::new(ConstantTexture::new(Vec3::uniform(0.73)));
+    let light = DiffuseLight::new(ConstantTexture::new(Vec3::uniform(15.0)));
+
+    let world = HitableList::new(vec![
+        FlipNormals::new_boxed(YZRect::new(0.0, 555.0, 0.0, 555.0, 555.0, Box::new(green))),        // Left plane
+        YZRect::new_boxed(0.0, 555.0, 0.0, 555.0, 0.0, Box::new(red)),                                   // Right plane
+        XZRect::new_boxed(213.0, 343.0, 227.0, 322.0, 554.0, Box::new(light)),                           // Top light
+        XZRect::new_boxed(0.0, 555.0, 0.0, 555.0, 0.0, Box::new(white)),                                 // Bottom plane
+        FlipNormals::new_boxed(XZRect::new(0.0, 555.0, 0.0, 555.0, 555.0, Box::new(white2))),       // Top plane
+        FlipNormals::new_boxed(XYRect::new(0.0, 555.0, 0.0, 555.0, 555.0, Box::new(white3)))        // Back plane
+    ]);
+
+    (world, make_camera(Vec3::new(278.0, 278.0, -800.0), Vec3::new(278.0, 278.0, 0.0), 40.0, nx as u32, ny as u32, 0.0, 1.0))
+}
+
+#[allow(dead_code)]
+fn make_cornell_smoke(nx: u32, ny: u32) -> (HitableList, Camera) {
+    let red = LambertianTextured::new(ConstantTexture::new(Vec3::new(0.65, 0.05, 0.05)));
+    let green= LambertianTextured::new(ConstantTexture::new(Vec3::new(0.12, 0.45, 0.15)));
+    // TODO: Remove duplication
+    let white = LambertianTextured::new(ConstantTexture::new(Vec3::uniform(0.73)));
+    let white2 = LambertianTextured::new(ConstantTexture::new(Vec3::uniform(0.73)));
+    let white3 = LambertianTextured::new(ConstantTexture::new(Vec3::uniform(0.73)));
+    let white4 = LambertianTextured::new(ConstantTexture::new(Vec3::uniform(0.73)));
+    let white5 = LambertianTextured::new(ConstantTexture::new(Vec3::uniform(0.73)));
+    let light = DiffuseLight::new(ConstantTexture::new(Vec3::uniform(15.0)));
+
+//    let b1 = Translate::new(RotateY::new(Cube::new(Vec3::uniform(0.0), Vec3::uniform(165.0), white4), -18.0), Vec3::new(130.0, 0.0, 65.0));
+//    let b1 = Translate::new(RotateY::new(Cube::new(Vec3::uniform(0.0), Vec3::new(165.0, 330.0, 165.0), white5), 15.0), Vec3::new(265.0, 0.0, 295.0));
+
+    let world = HitableList::new(vec![
+        FlipNormals::new_boxed(YZRect::new(0.0, 555.0, 0.0, 555.0, 555.0, Box::new(green))),        // Left plane
+        YZRect::new_boxed(0.0, 555.0, 0.0, 555.0, 0.0, Box::new(red)),                                   // Right plane
+        XZRect::new_boxed(213.0, 343.0, 227.0, 322.0, 554.0, Box::new(light)),                           // Top light
+        XZRect::new_boxed(0.0, 555.0, 0.0, 555.0, 0.0, Box::new(white)),                                 // Bottom plane
+        FlipNormals::new_boxed(XZRect::new(0.0, 555.0, 0.0, 555.0, 555.0, Box::new(white2))),       // Top plane
+        FlipNormals::new_boxed(XYRect::new(0.0, 555.0, 0.0, 555.0, 555.0, Box::new(white3))),       // Back plane
+//        ConstantMedium::new_boxed(b1, 0.01, ConstantTexture::new(Vec3::uniform(1.0))),
+//        ConstantMedium::new_boxed(b2, 0.01, ConstantTexture::new(Vec3::uniform(0.0)))
+    ]);
+
+    (world, make_camera(Vec3::new(278.0, 278.0, -800.0), Vec3::new(278.0, 278.0, 0.0), 40.0, nx as u32, ny as u32, 0.0, 1.0))
+}
+
+fn make_camera(lookfrom: Vec3, lookat: Vec3, vfov: f32, nx: u32, ny: u32, aperture: f32, dist_to_focus: f32) -> Camera {
+    Camera::new(lookfrom, lookat, Vec3::new(0.0, 1.0, 0.0), vfov, nx as f32 / ny as f32, aperture, dist_to_focus, 0.0, 1.0)
+}
+
+fn make_default_camera(nx: u32, ny: u32) -> Camera {
     let lookfrom = Vec3::new(13.0, 2.0, 3.0);
     let lookat = Vec3::new(0.0, 0.0, 0.0);
     let dist_to_focus = 10.0;
@@ -174,10 +295,15 @@ fn calculate_pixel<T: Hitable>(index: usize, width: usize, height: usize, sample
 fn run() {
     let nx: usize = 600;
     let ny: usize = 400;
-    let ns: usize = 10;
-//    let world = make_scene();
-    let world = make_random_scene();
-    let cam = make_camera(nx as u32, ny as u32);
+    let ns: usize = 100;
+//    let (world, cam) = make_scene(nx as u32, ny as u32);
+//    let (world, cam) = make_random_scene(nx as u32, ny as u32);
+//    let (world, cam) = make_random_moving_scene(nx as u32, ny as u32);
+//    let (world, cam) = make_two_spheres_scene(nx as u32, ny as u32);
+//    let (world, cam) = make_earth_scene(nx as u32, ny as u32);
+//    let (world, cam) = make_two_perlin_spheres_scene(nx as u32, ny as u32);
+//    let (world, cam) = make_simple_light_scene(nx as u32, ny as u32);
+    let (world, cam) = make_cornell_box(nx as u32, ny as u32);
 
     let start = PreciseTime::now();
 
@@ -199,3 +325,9 @@ fn run() {
 fn main() {
     run();
 }
+
+// TODO: Remaining Chapters of Book 2
+// TODO: 2: Bounded Volume Hierarchies
+// TODO: 7: Instances
+// TODO: 8: Volumes - Needs testing and implementing #7
+// TODO: 9: A Scene Testing - All new features

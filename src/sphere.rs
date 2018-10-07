@@ -3,16 +3,21 @@ use ray::Ray;
 use material::Material;
 use hitable::{Hitable, HitRecord};
 use std::f32::consts::{PI, FRAC_PI_2};
-use std::sync::Arc;
+
+fn get_sphere_uv(p: &Vec3) -> (f32, f32) {
+    let phi = p.z().atan2(p.x());
+    let theta = p.y().asin();
+    (1.0 - (phi + PI) / (2.0 * PI), (theta + FRAC_PI_2) / PI)
+}
 
 pub struct Sphere {
     center: Vec3,
     radius: f32,
     // What if this was a MaterialIndex? like what I'm planning on doing with SphereIndex/PrimativeIndex?
+    // TODO: Make this a ref (and store materials somewhere more efficient than random heap objects)?
     material: Box<Material>
 }
 
-//impl <'mat> Sphere<'mat> {
 impl Sphere {
     pub fn new(center: Vec3, radius: f32, material: Box<Material>) -> Sphere {
         Sphere{ center, radius, material }
@@ -25,7 +30,8 @@ impl Sphere {
     #[inline(always)]
     pub fn create_hit_record(&self, ray: &Ray, t: f32) -> HitRecord {
         let p = ray.point_at_parameter(t);
-        HitRecord::new(t, p, (p - self.center) / self.radius, self.material.as_ref())
+        let (u, v) = get_sphere_uv(&((p - self.center) / self.radius));
+        HitRecord::new(t, p, u, v, (p - self.center) / self.radius, self.material.as_ref())
     }
 }
 
@@ -55,16 +61,11 @@ impl Hitable for Sphere {
     }
 }
 
-fn get_sphere_uv(p: &Vec3) -> (f32, f32) {
-    let phi = p.z().atan2(p.x());
-    let theta = p.y().asin();
-    (1.0 - (phi + PI) / (2.0 * PI), (theta + FRAC_PI_2) / PI)
-}
-
 pub struct MovingSphere {
     center0: Vec3,
     center1: Vec3,
     radius: f32,
+    // TODO: Make this a ref (and store materials somewhere more efficient than random heap objects)?
     material: Box<Material>,
     time0: f32,
     time1: f32
@@ -82,10 +83,10 @@ impl MovingSphere {
     #[inline(always)]
     pub fn create_hit_record(&self, ray: &Ray, t: f32) -> HitRecord {
         let p = ray.point_at_parameter(t);
-//        let (u, v) = get_sphere_uv(&(record.p - self.center) / self.radius);
-//        record.u = u;
-//        record.v = v;
-        HitRecord::new(t, p, (p - self.center(ray.time())) / self.radius, self.material.as_ref())
+        // FIXME: Work out whether uv coords are needed for movingsphere
+        let (u, v) = get_sphere_uv(&((p - self.center(t)) / self.radius));
+//        let (u, v) = (0.0, 0.0);
+        HitRecord::new(t, p, u, v, (p - self.center(ray.time())) / self.radius, self.material.as_ref())
     }
 
     #[inline]

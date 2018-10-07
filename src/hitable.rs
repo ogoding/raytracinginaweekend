@@ -1,7 +1,6 @@
 use vec3::Vec3;
 use ray::Ray;
 use material::Material;
-use std::sync::Arc;
 
 //#[derive(Debug)]
 #[derive(Clone)]
@@ -10,14 +9,16 @@ pub struct HitRecord<'mat> {
     pub t: f32,
     // FIXME: Improve naming
     pub p: Vec3,
+    pub u: f32,
+    pub v: f32,
     pub normal: Vec3,
     // What if this was a MaterialIndex? like what I'm planning on doing with SphereIndex/PrimativeIndex?
     pub material: &'mat Material
 }
 
 impl <'mat> HitRecord<'mat> {
-    pub fn new(t: f32, p: Vec3, normal: Vec3, material: &'mat Material) -> HitRecord {
-        HitRecord{ t, p, normal, material }
+    pub fn new(t: f32, p: Vec3, u: f32, v: f32, normal: Vec3, material: &'mat Material) -> HitRecord {
+        HitRecord{ t, p, u, v, normal, material }
     }
 }
 
@@ -96,3 +97,30 @@ impl Hitable for HitableList {
 //        temp_rec
 //    }
 //}
+
+pub struct FlipNormals<H> {
+    ptr: H
+}
+
+impl <H: Hitable> FlipNormals<H> {
+    pub fn new(ptr: H) -> FlipNormals<H> {
+        FlipNormals{ ptr }
+    }
+
+    pub fn new_boxed(ptr: H) -> Box<FlipNormals<H>> {
+        Box::new(FlipNormals::new(ptr))
+    }
+}
+
+impl <H: Hitable> Hitable for FlipNormals<H> {
+    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
+//        let hit = self.ptr.hit(ray, t_min, t_max);
+        if let Some(hit) = self.ptr.hit(ray, t_min, t_max) {
+            let mut hit = hit;
+            hit.normal = -hit.normal;
+            Some(hit)
+        } else {
+            None
+        }
+    }
+}

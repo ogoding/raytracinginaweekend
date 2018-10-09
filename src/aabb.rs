@@ -2,7 +2,7 @@ use vec3::Vec3;
 use ray::Ray;
 
 use std::mem::swap;
-use std::cmp::Ordering;
+//use std::cmp::Ordering;
 
 #[inline]
 fn ffmin(a: f32, b: f32) -> f32 {

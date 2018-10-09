@@ -98,6 +98,7 @@ impl Hitable for HitableList {
 //    }
 //}
 
+// TODO: Move this into transform.rs?
 pub struct FlipNormals<H> {
     ptr: H
 }

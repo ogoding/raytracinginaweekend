@@ -38,7 +38,7 @@ fn schlick(cosine: f32, ref_idx: f32) -> f32 {
 
 pub trait Material {
     fn scatter(&self, ray: &Ray, hit_record: &HitRecord, attenuation: &mut Vec3, scattered: &mut Ray) -> bool;
-    fn emitted(&self, u: f32, v: f32, p: &Vec3) -> Vec3 {
+    fn emitted(&self, _u: f32, _v: f32, _p: &Vec3) -> Vec3 {
         Vec3::zero()
     }
 }
@@ -164,7 +164,7 @@ impl <T: Texture> DiffuseLight<T> {
 }
 
 impl <T: Texture> Material for DiffuseLight<T> {
-    fn scatter(&self, ray: &Ray, hit_record: &HitRecord, attenuation: &mut Vec3, scattered: &mut Ray) -> bool {
+    fn scatter(&self, _ray: &Ray, _hit_record: &HitRecord, _attenuation: &mut Vec3, _scattered: &mut Ray) -> bool {
         false
     }
 

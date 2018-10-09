@@ -2,6 +2,8 @@ use vec3::Vec3;
 use ray::Ray;
 use material::Material;
 use hitable::{Hitable, HitRecord};
+use aabb::{AABBVolume, surrounding_box};
+
 use std::f32::consts::{PI, FRAC_PI_2};
 
 fn get_sphere_uv(p: &Vec3) -> (f32, f32) {
@@ -58,6 +60,10 @@ impl Hitable for Sphere {
         }
 
         None
+    }
+
+    fn bounding_box(&self, t_min: f32, t_max: f32) -> Option<AABBVolume> {
+        Some(AABBVolume::new(self.center - Vec3::uniform(self.radius), self.center + Vec3::uniform(self.radius)))
     }
 }
 
@@ -118,5 +124,14 @@ impl Hitable for MovingSphere {
         }
 
         None
+    }
+
+    fn bounding_box(&self, t_min: f32, t_max: f32) -> Option<AABBVolume> {
+        let center_min = self.center(t_min);
+        let center_max = self.center(t_max);
+        let box0 = AABBVolume::new(center_min - Vec3::uniform(self.radius), center_min + Vec3::uniform(self.radius));
+        let box1 = AABBVolume::new(center_max - Vec3::uniform(self.radius), center_max + Vec3::uniform(self.radius));
+
+        Some(surrounding_box(box0, box1))
     }
 }

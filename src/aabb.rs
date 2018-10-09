@@ -40,6 +40,14 @@ impl AABBVolume {
         AABBVolume{ min, max }
     }
 
+    pub fn min(&self) -> Vec3 {
+        self.min
+    }
+
+    pub fn max(&self) -> Vec3 {
+        self.max
+    }
+
     #[inline(always)]
     fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> bool {
         for a in 0..3 {

@@ -34,6 +34,14 @@ impl <T: Hitable> Hitable for Translate<T> {
             None
         }
     }
+
+    fn bounding_box(&self, t_min: f32, t_max: f32) -> Option<AABBVolume> {
+        if let Some(aabb) = self.ptr.bounding_box(t_min, t_max) {
+            Some(AABBVolume::new(aabb.min() + self.offset, aabb.max() + self.offset))
+        } else {
+            None
+        }
+    }
 }
 
 pub struct RotateY<T: Hitable> {
@@ -52,24 +60,33 @@ impl <T: Hitable> RotateY<T> {
         let cos_theta = radians.cos();
 
         // TODO: Work out if this is needed
-//        let has_box = ptr.bounding_box(0.0, 1.0);
-//        let aabb_box = ptr.bounding_box(0.0, 1.0);
-//        let min = Vec3::uniform(f32::MAX);
-//        let max = Vec3::uniform(f32::MIN);
+//        let has_box = self.ptr.bounding_box(0.0, 1.0);
+        // TODO: Work out correct default
+        let aabb_box = ptr.bounding_box(0.0, 1.0).unwrap_or(AABBVolume::zero());
+        let mut min = Vec3::uniform(f32::MAX);
+        let mut max = Vec3::uniform(f32::MIN);
 
         // TODO: Finish this
-//        for i in 0..2 {
-//            for j in 0..2 {
-//                for k in 0..2 {
-//                    let x = ;
-//                    let y = ;
-//                    let z = ;
-//                }
-//            }
-//        }
+        for i in 0..2 {
+            for j in 0..2 {
+                for k in 0..2 {
+                    let x = i as f32 * aabb_box.max().x() + (1 - i) as f32  * aabb_box.min().x();
+                    let y = j as f32 * aabb_box.max().y() + (1 - j) as f32  * aabb_box.min().y();
+                    let z = k as f32 * aabb_box.max().z() + (1 - k) as f32  * aabb_box.min().z();
+                    let newx = cos_theta * x + sin_theta * z;
+                    let newz = -sin_theta * x + cos_theta * z;
+                    let tester = Vec3::new(newx, y, newz);
+
+                    for c in 0..3 {
+                        if tester[c] > max[c] { max[c] = tester[c]; }
+                        if tester[c] < min[c] { min[c] = tester[c]; }
+                    }
+                }
+            }
+        }
 
         // TODO: Implement the aabb box calculation
-        RotateY{ ptr, sin_theta, cos_theta, aabb_box: None }
+        RotateY{ ptr, sin_theta, cos_theta, aabb_box: Some(AABBVolume::new(min, max)) }
     }
 
     pub fn new_boxed(ptr: T, angle: f32) -> Box<RotateY<T>> {
@@ -111,5 +128,9 @@ impl <T: Hitable> Hitable for RotateY<T> {
         } else {
             None
         }
+    }
+
+    fn bounding_box(&self, t_min: f32, t_max: f32) -> Option<AABBVolume> {
+        self.ptr.bounding_box(t_min, t_max)
     }
 }

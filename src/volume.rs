@@ -1,6 +1,7 @@
 use vec3::Vec3;
 use ray::Ray;
 use hitable::{Hitable, HitRecord};
+use aabb::AABBVolume;
 use texture::Texture;
 use material::{Material, Isotropic};
 use random::drand48;
@@ -87,5 +88,9 @@ impl Hitable for ConstantMedium {
         }
 
         None
+    }
+
+    fn bounding_box(&self, t_min: f32, t_max: f32) -> Option<AABBVolume> {
+        self.boundary.bounding_box(t_min, t_max)
     }
 }

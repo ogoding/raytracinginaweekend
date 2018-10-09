@@ -1,6 +1,7 @@
 use vec3::Vec3;
 use ray::Ray;
 use material::Material;
+use aabb::{AABBVolume, surrounding_box};
 
 //#[derive(Debug)]
 #[derive(Clone)]
@@ -24,18 +25,19 @@ impl <'mat> HitRecord<'mat> {
 
 pub trait Hitable {
     fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord>;
+    fn bounding_box(&self, t_min: f32, t_max: f32) -> Option<AABBVolume>;
 }
 
 // TODO: Remove generics and create push methods to box and add Hitable to internal list
 // TODO: This will likely require changing internal list to Vec<Box<dyn Hitable>> or do something fancy with an untyped arena/allocator
 pub struct HitableList {
     // TODO: Do something smart with a Arena or map of typeid, Vec<SomeHitableType>
-    hitable_list: Vec<Box<dyn Hitable>>
+    list: Vec<Box<dyn Hitable>>
 }
 
 impl HitableList {
     pub fn new(list: Vec<Box<dyn Hitable>>) -> HitableList {
-        HitableList{ hitable_list: list }
+        HitableList{ list: list }
     }
 }
 
@@ -48,7 +50,7 @@ impl Hitable for HitableList {
         let mut closest_so_far = t_max;
 
         // Could this escape loop early? and/or be a map/reduce?
-        for hitable in self.hitable_list.iter() {
+        for hitable in self.list.iter() {
 //            if let Some(record) = hitable.hit(ray, t_min, closest_so_far) {
 //                closest_so_far = record.t;
 //                temp_rec = Some(record);
@@ -63,15 +65,42 @@ impl Hitable for HitableList {
 
         temp_rec
     }
+
+    fn bounding_box(&self, t0: f32, t1: f32) -> Option<AABBVolume> {
+        if self.list.len() > 0 {
+            let mut result = match self.list[0].bounding_box(t0, t1) {
+                Some(bounding_box) => bounding_box,
+                None => return None
+            };
+
+            for hitable in &self.list[1..] {
+                match hitable.bounding_box(t0, t1) {
+                    Some(bounding_box) => result = surrounding_box(result, bounding_box),
+                    None => return None
+                }
+            }
+//            for i in 1..self.list.len() {
+//                if self.list[i].bounding_box(t0, t1) {
+//
+//                } else {
+//                    return None;
+//                }
+//            }
+
+            Some(result)
+        } else {
+            None
+        }
+    }
 }
 
 //pub struct HitableList<T: Hitable> {
-//    hitable_list: Vec<T>
+//    list: Vec<T>
 //}
 
 //impl <T: Hitable> HitableList<T> {
 //    pub fn new(list: Vec<T>) -> HitableList<T> {
-//        HitableList{ hitable_list: list }
+//        HitableList{ list: list }
 //    }
 //}
 
@@ -81,7 +110,7 @@ impl Hitable for HitableList {
 //        let mut closest_so_far = t_max;
 //
 //        // Could this escape loop early? and/or be a map/reduce?
-//        for hitable in self.hitable_list.iter() {
+//        for hitable in self.list.iter() {
 ////            if let Some(record) = hitable.hit(ray, t_min, closest_so_far) {
 ////                closest_so_far = record.t;
 ////                temp_rec = Some(record);
@@ -123,5 +152,9 @@ impl <H: Hitable> Hitable for FlipNormals<H> {
         } else {
             None
         }
+    }
+
+    fn bounding_box(&self, t_min: f32, t_max: f32) -> Option<AABBVolume> {
+        self.ptr.bounding_box(t_min, t_max)
     }
 }

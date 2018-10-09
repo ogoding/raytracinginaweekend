@@ -1,7 +1,7 @@
 use vec3::Vec3;
 use ray::Ray;
 use hitable::{Hitable, HitRecord};
-//use aabb::AABBVolume;
+use aabb::AABBVolume;
 use material::Material;
 
 pub struct XYRect {
@@ -46,9 +46,9 @@ impl Hitable for XYRect {
         Some(HitRecord::new(t, ray.point_at_parameter(t), u, v, Vec3::new(0.0, 0.0, 1.0), self.material.as_ref()))
     }
 
-//    fn bounding_box(&self, t0: f32, t1: f32, hit_record: &HitRecord) -> Option<AABBVolume> {
-//        Some(AABBVolume::new(Vec3::new(self.x0, self.y0, self.k - 0.0001), Vec3::new(self.x1, self.y1, self.k + 0.0001)))
-//    }
+    fn bounding_box(&self, t0: f32, t1: f32) -> Option<AABBVolume> {
+        Some(AABBVolume::new(Vec3::new(self.x0, self.y0, self.k - 0.0001), Vec3::new(self.x1, self.y1, self.k + 0.0001)))
+    }
 }
 
 pub struct XZRect {
@@ -89,9 +89,9 @@ impl Hitable for XZRect {
         Some(HitRecord::new(t, ray.point_at_parameter(t), u, v, Vec3::new(0.0, 1.0, 0.0), self.material.as_ref()))
     }
 
-//    fn bounding_box(&self, t0: f32, t1: f32, hit_record: &HitRecord) -> Option<AABBVolume> {
-//        Some(AABBVolume::new(Vec3::new(self.x0, self.k - 0.0001, self.z0), Vec3::new(self.x1, self.k + 0.0001, self.z1)))
-//    }
+    fn bounding_box(&self, t0: f32, t1: f32) -> Option<AABBVolume> {
+        Some(AABBVolume::new(Vec3::new(self.x0, self.k - 0.0001, self.z0), Vec3::new(self.x1, self.k + 0.0001, self.z1)))
+    }
 }
 
 pub struct YZRect {
@@ -132,7 +132,7 @@ impl Hitable for YZRect {
         Some(HitRecord::new(t, ray.point_at_parameter(t), u, v, Vec3::new(1.0, 0.0, 0.0), self.material.as_ref()))
     }
 
-//    fn bounding_box(&self, t0: f32, t1: f32, hit_record: &HitRecord) -> Option<AABBVolume> {
-//        Some(AABBVolume::new(Vec3::new(self.k - 0.0001, self.y0, self.z0), Vec3::new(self.k + 0.0001, self.y1, self.z1)))
-//    }
+    fn bounding_box(&self, t0: f32, t1: f32) -> Option<AABBVolume> {
+        Some(AABBVolume::new(Vec3::new(self.k - 0.0001, self.y0, self.z0), Vec3::new(self.k + 0.0001, self.y1, self.z1)))
+    }
 }

@@ -2,7 +2,7 @@ use vec3::Vec3;
 use ray::Ray;
 use hitable::{Hitable, HitRecord};
 use aabb::AABBVolume;
-use material::Material;
+use material::MaterialIndex;
 
 pub struct XYRect {
     x0: f32,
@@ -10,17 +10,15 @@ pub struct XYRect {
     y0: f32,
     y1: f32,
     k: f32,
-    // TODO: Make this a ref (and store materials somewhere more efficient than random heap objects)?
-//    material: &'mat Material
-    material: Box<Material>
+    material: MaterialIndex
 }
 
 impl XYRect {
-    pub fn new(x0: f32, x1: f32, y0: f32, y1: f32, k: f32, material: Box<Material>) -> XYRect {
+    pub fn new(x0: f32, x1: f32, y0: f32, y1: f32, k: f32, material: MaterialIndex) -> XYRect {
         XYRect{ x0, x1, y0, y1, k, material }
     }
 
-    pub fn new_boxed(x0: f32, x1: f32, y0: f32, y1: f32, k: f32, material: Box<Material>) -> Box<XYRect> {
+    pub fn new_boxed(x0: f32, x1: f32, y0: f32, y1: f32, k: f32, material: MaterialIndex) -> Box<XYRect> {
         Box::new(XYRect::new(x0, x1, y0, y1, k, material))
     }
 }
@@ -43,10 +41,10 @@ impl Hitable for XYRect {
         let u = (x - self.x0) / (self.x1 - self.x0);
         let v = (y - self.y0) / (self.y1 - self.y0);
 
-        Some(HitRecord::new(t, ray.point_at_parameter(t), u, v, Vec3::new(0.0, 0.0, 1.0), self.material.as_ref()))
+        Some(HitRecord::new(t, ray.point_at_parameter(t), u, v, Vec3::new(0.0, 0.0, 1.0), self.material))
     }
 
-    fn bounding_box(&self, t0: f32, t1: f32) -> Option<AABBVolume> {
+    fn bounding_box(&self, _t0: f32, _t1: f32) -> Option<AABBVolume> {
         Some(AABBVolume::new(Vec3::new(self.x0, self.y0, self.k - 0.0001), Vec3::new(self.x1, self.y1, self.k + 0.0001)))
     }
 }
@@ -57,17 +55,15 @@ pub struct XZRect {
     z0: f32,
     z1: f32,
     k: f32,
-    // TODO: Make this a ref (and store materials somewhere more efficient than random heap objects)?
-//    material: &'mat Material
-    material: Box<Material>
+    material: MaterialIndex
 }
 
 impl XZRect {
-    pub fn new(x0: f32, x1: f32, z0: f32, z1: f32, k: f32, material: Box<Material>) -> XZRect {
+    pub fn new(x0: f32, x1: f32, z0: f32, z1: f32, k: f32, material: MaterialIndex) -> XZRect {
         XZRect{ x0, x1, z0, z1, k, material }
     }
 
-    pub fn new_boxed(x0: f32, x1: f32, z0: f32, z1: f32, k: f32, material: Box<Material>) -> Box<XZRect> {
+    pub fn new_boxed(x0: f32, x1: f32, z0: f32, z1: f32, k: f32, material: MaterialIndex) -> Box<XZRect> {
         Box::new(XZRect::new(x0, x1, z0, z1, k, material))
     }
 }
@@ -86,10 +82,10 @@ impl Hitable for XZRect {
         let u = (x - self.x0) / (self.x1 - self.x0);
         let v = (z - self.z0) / (self.z1 - self.z0);
 
-        Some(HitRecord::new(t, ray.point_at_parameter(t), u, v, Vec3::new(0.0, 1.0, 0.0), self.material.as_ref()))
+        Some(HitRecord::new(t, ray.point_at_parameter(t), u, v, Vec3::new(0.0, 1.0, 0.0), self.material))
     }
 
-    fn bounding_box(&self, t0: f32, t1: f32) -> Option<AABBVolume> {
+    fn bounding_box(&self, _t0: f32, _t1: f32) -> Option<AABBVolume> {
         Some(AABBVolume::new(Vec3::new(self.x0, self.k - 0.0001, self.z0), Vec3::new(self.x1, self.k + 0.0001, self.z1)))
     }
 }
@@ -100,17 +96,15 @@ pub struct YZRect {
     z0: f32,
     z1: f32,
     k: f32,
-    // TODO: Make this a ref (and store materials somewhere more efficient than random heap objects)?
-//    material: &'mat Material
-    material: Box<Material>
+    material: MaterialIndex
 }
 
 impl YZRect {
-    pub fn new(y0: f32, y1: f32, z0: f32, z1: f32, k: f32, material: Box<Material>) -> YZRect {
+    pub fn new(y0: f32, y1: f32, z0: f32, z1: f32, k: f32, material: MaterialIndex) -> YZRect {
         YZRect{ y0, y1, z0, z1, k, material }
     }
 
-    pub fn new_boxed(y0: f32, y1: f32, z0: f32, z1: f32, k: f32, material: Box<Material>) -> Box<YZRect> {
+    pub fn new_boxed(y0: f32, y1: f32, z0: f32, z1: f32, k: f32, material: MaterialIndex) -> Box<YZRect> {
         Box::new(YZRect::new(y0, y1, z0, z1, k, material))
     }
 }
@@ -129,10 +123,10 @@ impl Hitable for YZRect {
         let u = (y - self.y0) / (self.y1 - self.y0);
         let v = (z - self.z0) / (self.z1 - self.z0);
 
-        Some(HitRecord::new(t, ray.point_at_parameter(t), u, v, Vec3::new(1.0, 0.0, 0.0), self.material.as_ref()))
+        Some(HitRecord::new(t, ray.point_at_parameter(t), u, v, Vec3::new(1.0, 0.0, 0.0), self.material))
     }
 
-    fn bounding_box(&self, t0: f32, t1: f32) -> Option<AABBVolume> {
+    fn bounding_box(&self, _t0: f32, _t1: f32) -> Option<AABBVolume> {
         Some(AABBVolume::new(Vec3::new(self.k - 0.0001, self.y0, self.z0), Vec3::new(self.k + 0.0001, self.y1, self.z1)))
     }
 }

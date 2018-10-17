@@ -2,7 +2,6 @@ use vec3::Vec3;
 use ray::Ray;
 
 use std::mem::swap;
-//use std::cmp::Ordering;
 
 #[inline]
 fn ffmin(a: f32, b: f32) -> f32 {
@@ -48,8 +47,7 @@ impl AABBVolume {
         self.max
     }
 
-    #[inline(always)]
-    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> bool {
+    pub fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> bool {
         for a in 0..3 {
             let inv_d = 1.0 / ray.direction()[a];
             let mut t0 = (self.min[a] - ray.origin()[a]) * inv_d;

@@ -4,6 +4,12 @@ use hitable::HitRecord;
 use random::drand48;
 use texture::{Texture, ConstantTexture};
 
+// TODO: Use this instead of direct references to Material structs to make dealing with lifetimes easier (and Primatives simpler)
+// TODO: Maybe make this include a TypeId and/or create a type for storing the Materials
+// TODO: Make this like u16 or something. a full u64 or u32 isn't necessary (and saves memory)
+pub type MaterialIndex = usize;
+pub type MaterialList = Vec<Box<Material>>;
+
 fn random_in_unit_sphere() -> Vec3 {
     loop {
         let p = 2.0 * Vec3::random() - Vec3::uniform(1.0);
@@ -153,6 +159,7 @@ impl Material for Dieletric {
     }
 }
 
+// FIXME: Something seems to have broken with the perlin noise + light and cornell smoke scenes
 pub struct DiffuseLight<T: Texture> {
     emit: T
 }

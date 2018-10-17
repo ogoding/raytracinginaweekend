@@ -4,7 +4,44 @@ use hitable::{Hitable, HitRecord};
 use aabb::AABBVolume;
 
 use std::f32;
-use std::f32::consts::PI;
+
+// TODO: Add a wrapper type for storing a reference to some Primative/Geometry in order to do proper instancing- e.g. Translate::new(GeometryRef(2), Vec3::uniform(5.0))
+
+pub struct FlipNormals<H> {
+    ptr: H
+}
+
+impl <H: Hitable> FlipNormals<H> {
+    pub fn new(ptr: H) -> FlipNormals<H> {
+        FlipNormals{ ptr }
+    }
+
+    pub fn new_boxed(ptr: H) -> Box<FlipNormals<H>> {
+        Box::new(FlipNormals::new(ptr))
+    }
+}
+
+impl <H: Hitable> Hitable for FlipNormals<H> {
+    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
+//        let hit = self.ptr.hit(ray, t_min, t_max);
+//        if let Some(hit) = self.ptr.hit(ray, t_min, t_max) {
+//            let mut hit = hit;
+//            hit.normal = -hit.normal;
+//            Some(hit)
+//        } else {
+//            None
+//        }
+
+        // TODO: Confirm that this is faster than the above code
+        let mut hit = self.ptr.hit(ray, t_min, t_max);
+        if let Some(ref mut record) = hit { record.normal = -record.normal }
+        hit
+    }
+
+    fn bounding_box(&self, t_min: f32, t_max: f32) -> Option<AABBVolume> {
+        self.ptr.bounding_box(t_min, t_max)
+    }
+}
 
 pub struct Translate<T: Hitable> {
     ptr: T,
@@ -24,15 +61,18 @@ impl <T: Hitable> Translate<T> {
 impl <T: Hitable> Hitable for Translate<T> {
     fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
         let moved_ray = Ray::new(ray.origin() - self.offset, ray.direction(), ray.time());
-
 //        let hit = self.ptr.hit(ray, t_min, t_max);
-        if let Some(hit) = self.ptr.hit(&moved_ray, t_min, t_max) {
-            let mut hit = hit;
-            hit.p += self.offset;
-            Some(hit)
-        } else {
-            None
-        }
+//        if let Some(hit) = self.ptr.hit(&moved_ray, t_min, t_max) {
+//            let mut hit = hit;
+//            hit.p += self.offset;
+//            Some(hit)
+//        } else {
+//            None
+//        }
+        // TODO: Confirm that this is faster than the above code
+        let mut hit = self.ptr.hit(&moved_ray, t_min, t_max);
+        if let Some(ref mut record) = hit { record.p += self.offset; }
+        hit
     }
 
     fn bounding_box(&self, t_min: f32, t_max: f32) -> Option<AABBVolume> {
@@ -53,9 +93,7 @@ pub struct RotateY<T: Hitable> {
 
 impl <T: Hitable> RotateY<T> {
     pub fn new(ptr: T, angle: f32) -> RotateY<T> {
-        // TODO: Implement this
-        // TODO: Use something builtin if available
-        let radians = (PI / 180.0) * angle;
+        let radians = angle.to_radians();
         let sin_theta = radians.sin();
         let cos_theta = radians.cos();
 
@@ -66,7 +104,6 @@ impl <T: Hitable> RotateY<T> {
         let mut min = Vec3::uniform(f32::MAX);
         let mut max = Vec3::uniform(f32::MIN);
 
-        // TODO: Finish this
         for i in 0..2 {
             for j in 0..2 {
                 for k in 0..2 {
@@ -85,7 +122,6 @@ impl <T: Hitable> RotateY<T> {
             }
         }
 
-        // TODO: Implement the aabb box calculation
         RotateY{ ptr, sin_theta, cos_theta, aabb_box: Some(AABBVolume::new(min, max)) }
     }
 
@@ -130,7 +166,7 @@ impl <T: Hitable> Hitable for RotateY<T> {
         }
     }
 
-    fn bounding_box(&self, t_min: f32, t_max: f32) -> Option<AABBVolume> {
-        self.ptr.bounding_box(t_min, t_max)
+    fn bounding_box(&self, _t_min: f32, _t_max: f32) -> Option<AABBVolume> {
+        self.aabb_box
     }
 }

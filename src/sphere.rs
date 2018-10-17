@@ -1,6 +1,6 @@
 use vec3::Vec3;
 use ray::Ray;
-use material::Material;
+use material::MaterialIndex;
 use hitable::{Hitable, HitRecord};
 use aabb::{AABBVolume, surrounding_box};
 
@@ -15,17 +15,15 @@ fn get_sphere_uv(p: &Vec3) -> (f32, f32) {
 pub struct Sphere {
     center: Vec3,
     radius: f32,
-    // What if this was a MaterialIndex? like what I'm planning on doing with SphereIndex/PrimativeIndex?
-    // TODO: Make this a ref (and store materials somewhere more efficient than random heap objects)?
-    material: Box<Material>
+    material: MaterialIndex
 }
 
 impl Sphere {
-    pub fn new(center: Vec3, radius: f32, material: Box<Material>) -> Sphere {
+    pub fn new(center: Vec3, radius: f32, material: MaterialIndex) -> Sphere {
         Sphere{ center, radius, material }
     }
 
-    pub fn new_boxed(center: Vec3, radius: f32, material: Box<Material>) -> Box<Sphere> {
+    pub fn new_boxed(center: Vec3, radius: f32, material: MaterialIndex) -> Box<Sphere> {
         Box::new(Sphere::new(center, radius, material))
     }
 
@@ -33,7 +31,7 @@ impl Sphere {
     pub fn create_hit_record(&self, ray: &Ray, t: f32) -> HitRecord {
         let p = ray.point_at_parameter(t);
         let (u, v) = get_sphere_uv(&((p - self.center) / self.radius));
-        HitRecord::new(t, p, u, v, (p - self.center) / self.radius, self.material.as_ref())
+        HitRecord::new(t, p, u, v, (p - self.center) / self.radius, self.material)
     }
 }
 
@@ -62,7 +60,7 @@ impl Hitable for Sphere {
         None
     }
 
-    fn bounding_box(&self, t_min: f32, t_max: f32) -> Option<AABBVolume> {
+    fn bounding_box(&self, _t_min: f32, _t_max: f32) -> Option<AABBVolume> {
         Some(AABBVolume::new(self.center - Vec3::uniform(self.radius), self.center + Vec3::uniform(self.radius)))
     }
 }
@@ -71,18 +69,17 @@ pub struct MovingSphere {
     center0: Vec3,
     center1: Vec3,
     radius: f32,
-    // TODO: Make this a ref (and store materials somewhere more efficient than random heap objects)?
-    material: Box<Material>,
+    material: MaterialIndex,
     time0: f32,
     time1: f32
 }
 
 impl MovingSphere {
-    pub fn new(center0: Vec3, center1: Vec3, t0: f32, t1: f32, radius: f32, material: Box<Material>) -> MovingSphere {
+    pub fn new(center0: Vec3, center1: Vec3, t0: f32, t1: f32, radius: f32, material: MaterialIndex) -> MovingSphere {
         MovingSphere{ center0, center1, radius, material, time0: t0, time1: t1 }
     }
 
-    pub fn new_boxed(center0: Vec3, center1: Vec3, t0: f32, t1: f32, radius: f32, material: Box<Material>) -> Box<MovingSphere> {
+    pub fn new_boxed(center0: Vec3, center1: Vec3, t0: f32, t1: f32, radius: f32, material: MaterialIndex) -> Box<MovingSphere> {
         Box::new(MovingSphere::new(center0, center1, t0, t1, radius, material))
     }
 
@@ -92,7 +89,7 @@ impl MovingSphere {
         // FIXME: Work out whether uv coords are needed for movingsphere
         let (u, v) = get_sphere_uv(&((p - self.center(t)) / self.radius));
 //        let (u, v) = (0.0, 0.0);
-        HitRecord::new(t, p, u, v, (p - self.center(ray.time())) / self.radius, self.material.as_ref())
+        HitRecord::new(t, p, u, v, (p - self.center(ray.time())) / self.radius, self.material)
     }
 
     #[inline]

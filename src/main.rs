@@ -1,4 +1,9 @@
 //#![feature(nll)]
+// Does this need to go somewhere else?
+#![cfg_attr(test, feature(test))]
+
+// TODO: Move most of this stuff into a lib.rs?
+// TODO: run clippy and rustfmt
 
 extern crate rand;
 extern crate time;
@@ -30,7 +35,7 @@ use scenes::*;
 use vec3::Vec3;
 use image::{Image, RGB};
 use ray::{Ray, RAY_COUNT};
-use hitable::{Hitable, HitableList};
+use hitable::HitableList;
 use camera::Camera;
 use random::drand48;
 use material::MaterialList;
@@ -98,7 +103,6 @@ fn run() {
 //    let (mut scene, window) = make_random_scene(nx as u32, ny as u32, ns as u32);
 //    let (mut scene, window) = make_random_moving_scene(nx as u32, ny as u32, ns as u32);
 //    let (mut scene, window) = make_two_spheres_scene(nx as u32, ny as u32, ns as u32);
-    // TODO: Test the earth_scene/image_texture_scene
 //    let (mut scene, window) = make_earth_scene(nx as u32, ny as u32, ns as u32);
 //    let (mut scene, window) = make_two_perlin_spheres_scene(nx as u32, ny as u32, ns as u32);
     // FIXME: There are some weird light artifacts around edges of lights and at top of sphere
@@ -114,6 +118,7 @@ fn run() {
 
     let pixels: Vec<RGB> = (0..nx*ny)
         .into_par_iter()
+//        .into_iter()
         .map(|idx| calculate_pixel(idx, window.width as usize, window.height as usize, window.samples as usize, &scene.world, &bvh, &scene.materials, &window.camera))
         .collect();
 
@@ -131,6 +136,5 @@ fn main() {
 }
 
 // TODO: Remaining Chapters of Book 2
-// TODO: 5: Image Texture - Confirm that this actually works
 // TODO: 8: Volumes - Fix the weird lighting artfacts that are going on (happening in make_simple_light_scene too)
 // TODO: 9: A Scene Testing - All new features

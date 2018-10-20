@@ -28,15 +28,20 @@ impl Sphere {
     }
 
     #[inline(always)]
-    pub fn create_hit_record(&self, ray: &Ray, t: f32) -> HitRecord {
+    pub fn update_hit_record(&self, ray: &Ray, t: f32, hit_record: &mut HitRecord) {
         let p = ray.point_at_parameter(t);
         let (u, v) = get_sphere_uv(&((p - self.center) / self.radius));
-        HitRecord::new(t, p, u, v, (p - self.center) / self.radius, self.material)
+        hit_record.t = t;
+        hit_record.p = p;
+        hit_record.u = u;
+        hit_record.v = v;
+        hit_record.normal = (p - self.center) / self.radius;
+        hit_record.material = self.material;
     }
 }
 
 impl Hitable for Sphere {
-    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
+    fn hit_ptr(&self, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
         let oc = ray.origin() - self.center;
         let ray_direction = ray.direction();
         let a = ray_direction.squared_length();
@@ -48,16 +53,18 @@ impl Hitable for Sphere {
             let discrim_sqrt = discriminant.sqrt();
             let mut temp = (-b - discrim_sqrt) / a;
             if t_max > temp && temp > t_min {
-                return Some(self.create_hit_record(ray, temp));
+                self.update_hit_record(ray, temp, hit_record);
+                return true;
             }
 
             temp = (-b + discrim_sqrt) / a;
             if t_max > temp && temp > t_min {
-                return Some(self.create_hit_record(ray, temp));
+                self.update_hit_record(ray, temp, hit_record);
+                return true;
             }
         }
 
-        None
+        false
     }
 
     fn bounding_box(&self, _t_min: f32, _t_max: f32) -> Option<AABBVolume> {
@@ -84,12 +91,15 @@ impl MovingSphere {
     }
 
     #[inline(always)]
-    pub fn create_hit_record(&self, ray: &Ray, t: f32) -> HitRecord {
+    pub fn update_hit_record(&self, ray: &Ray, t: f32, hit_record: &mut HitRecord) {
         let p = ray.point_at_parameter(t);
-        // FIXME: Work out whether uv coords are needed for movingsphere
         let (u, v) = get_sphere_uv(&((p - self.center(t)) / self.radius));
-//        let (u, v) = (0.0, 0.0);
-        HitRecord::new(t, p, u, v, (p - self.center(ray.time())) / self.radius, self.material)
+        hit_record.t = t;
+        hit_record.p = p;
+        hit_record.u = u;
+        hit_record.v = v;
+        hit_record.normal = (p - self.center(ray.time())) / self.radius;
+        hit_record.material = self.material;
     }
 
     #[inline]
@@ -99,7 +109,7 @@ impl MovingSphere {
 }
 
 impl Hitable for MovingSphere {
-    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
+    fn hit_ptr(&self, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
         let oc = ray.origin() - self.center(ray.time());
         let ray_direction = ray.direction();
         let a = ray_direction.squared_length();
@@ -111,16 +121,18 @@ impl Hitable for MovingSphere {
             let discrim_sqrt = discriminant.sqrt();
             let mut temp = (-b - discrim_sqrt) / a;
             if t_max > temp && temp > t_min {
-                return Some(self.create_hit_record(ray, temp));
+                self.update_hit_record(ray, temp, hit_record);
+                return true;
             }
 
             temp = (-b + discrim_sqrt) / a;
             if t_max > temp && temp > t_min {
-                return Some(self.create_hit_record(ray, temp));
+                self.update_hit_record(ray, temp, hit_record);
+                return true;
             }
         }
 
-        None
+        false
     }
 
     fn bounding_box(&self, t_min: f32, t_max: f32) -> Option<AABBVolume> {

@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 // TODO: Replace Image struct with image crate - support range of image formats, etc
 
 #[derive(Copy, Clone)]
@@ -20,49 +18,6 @@ impl RGB {
 
     fn to_ppm(&self) -> String {
         self.red.to_string() + " " + &self.green.to_string() + " " + &self.blue.to_string() + "\n"
-    }
-}
-
-pub struct PixelPusher {
-    image: Image,
-    width_idx: u32,
-    height_idx: u32
-}
-
-impl PixelPusher {
-    pub fn new(image: Image) -> PixelPusher {
-        PixelPusher{ image, width_idx: 0, height_idx: 0 }
-    }
-
-    // TODO Add the scaled RGB pixel thing as a function here and remove from RGB type?
-
-    // TODO Change args to be individual rgb valuess?
-    pub fn push_pixel(&mut self, rgb: RGB) -> bool {
-        if self.width_idx >= self.width() && self.height_idx >= self.height() {
-            return false;
-        }
-
-        self.image.set(self.height_idx, self.width_idx, rgb);
-
-        self.width_idx += 1;
-        if self.width_idx >= self.width() {
-            self.width_idx = 0;
-            self.height_idx += 1;
-        }
-
-        true
-    }
-
-    pub fn width(&self) -> u32 {
-        self.image.width
-    }
-
-    pub fn height(&self) -> u32 {
-        self.image.height
-    }
-
-    pub fn into_image(self) -> Image {
-        self.image
     }
 }
 

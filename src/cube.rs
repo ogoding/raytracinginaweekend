@@ -1,19 +1,18 @@
 use vec3::Vec3;
 use ray::Ray;
-use hitable::{Hitable, HitRecord, HitableList};
+use hitable::{Hitable, HitRecord};
 use aarect::{XYRect, XZRect, YZRect};
 use transform::FlipNormals;
 use material::MaterialIndex;
-use aabb::AABBVolume;
+use aabb::{AABBVolume, surrounding_box};
 
 pub struct Cube {
-    list: HitableList,
-//    top: FlipNormals<XZRect>,
-//    bottom: XZRect,
-//    front: XYRect,
-//    back: FlipNormals<XYRect>,
-//    left: FlipNormals<YZRect>,
-//    right: YZRect
+    top: FlipNormals<XZRect>,
+    bottom: XZRect,
+    front: XYRect,
+    back: FlipNormals<XYRect>,
+    left: FlipNormals<YZRect>,
+    right: YZRect
 }
 
 impl Cube {
@@ -25,40 +24,64 @@ impl Cube {
         let right = YZRect::new(pmin.y(), pmax.y(), pmin.z(), pmax.z(), pmax.x(), mat);
         let left = FlipNormals::new(YZRect::new(pmin.y(), pmax.y(), pmin.z(), pmax.z(), pmin.x(), mat));
 
-//        Cube{ top, bottom, front, back, left, right }
-        Cube{ list: HitableList::new(vec![Box::new(front), Box::new(back), Box::new(bottom), Box::new(top), Box::new(right), Box::new(left)]) }
+        Cube{ top, bottom, front, back, left, right }
     }
 
+    #[allow(dead_code)]
     pub fn new_boxed(pmin: Vec3, pmax: Vec3, mat: MaterialIndex) -> Box<Cube> {
         Box::new(Cube::new(pmin, pmax, mat))
     }
 }
 
 impl Hitable for Cube {
-    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
-        self.list.hit(ray, t_min, t_max)
-//        let mut hit = self.top.hit(ray, t_min, t_max);
-//        if hit.is_some() { return hit; }
-//        hit = self.bottom.hit(ray, t_min, t_max);
-//        if hit.is_some() { return hit; }
-//        hit = self.front.hit(ray, t_min, t_max);
-//        if hit.is_some() { return hit; }
-//        hit =  self.back.hit(ray, t_min, t_max);
-//        if hit.is_some() { return hit; }
-//        hit = self.left.hit(ray, t_min, t_max);
-//        if hit.is_some() { return hit; }
-//
-//        return self.right.hit(ray, t_min, t_max);
+    fn hit_ptr(&self, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
+        let mut temp_rec = HitRecord::zero();
+        let mut hit_anything = false;
+        let mut closest_so_far = t_max;
+
+        // TODO: Make a macro or fn to clean this up a bit
+        if self.front.hit_ptr(ray, t_min, closest_so_far, &mut temp_rec) {
+            hit_anything = true;
+            closest_so_far = temp_rec.t;
+            *hit_record = temp_rec;
+        }
+        if self.back.hit_ptr(ray, t_min, closest_so_far, &mut temp_rec) {
+            hit_anything = true;
+            closest_so_far = temp_rec.t;
+            *hit_record = temp_rec;
+        }
+        if self.top.hit_ptr(ray, t_min, closest_so_far, &mut temp_rec) {
+            hit_anything = true;
+            closest_so_far = temp_rec.t;
+            *hit_record = temp_rec;
+        }
+        if self.bottom.hit_ptr(ray, t_min, closest_so_far, &mut temp_rec) {
+            hit_anything = true;
+            closest_so_far = temp_rec.t;
+            *hit_record = temp_rec;
+        }
+        if self.left.hit_ptr(ray, t_min, closest_so_far, &mut temp_rec) {
+            hit_anything = true;
+            closest_so_far = temp_rec.t;
+            *hit_record = temp_rec;
+        }
+        if self.right.hit_ptr(ray, t_min, closest_so_far, &mut temp_rec) {
+            hit_anything = true;
+            closest_so_far = temp_rec.t;
+            *hit_record = temp_rec;
+        }
+
+        hit_anything
+
     }
 
     fn bounding_box(&self, t_min: f32, t_max: f32) -> Option<AABBVolume> {
-        self.list.bounding_box(t_min, t_max)
-//        let mut bbox = self.top.bounding_box(t_min, t_max).unwrap();
-//        bbox = surrounding_box(bbox, self.bottom.bounding_box(t_min, t_max).unwrap());
-//        bbox = surrounding_box(bbox, self.left.bounding_box(t_min, t_max).unwrap());
-//        bbox = surrounding_box(bbox, self.right.bounding_box(t_min, t_max).unwrap());
-//        bbox = surrounding_box(bbox, self.front.bounding_box(t_min, t_max).unwrap());
-//        bbox = surrounding_box(bbox, self.back.bounding_box(t_min, t_max).unwrap());
-//        Some(bbox)
+        let mut bbox = self.top.bounding_box(t_min, t_max).unwrap();
+        bbox = surrounding_box(bbox, self.bottom.bounding_box(t_min, t_max).unwrap());
+        bbox = surrounding_box(bbox, self.left.bounding_box(t_min, t_max).unwrap());
+        bbox = surrounding_box(bbox, self.right.bounding_box(t_min, t_max).unwrap());
+        bbox = surrounding_box(bbox, self.front.bounding_box(t_min, t_max).unwrap());
+        bbox = surrounding_box(bbox, self.back.bounding_box(t_min, t_max).unwrap());
+        Some(bbox)
     }
 }

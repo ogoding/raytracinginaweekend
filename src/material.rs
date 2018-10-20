@@ -2,7 +2,7 @@ use vec3::Vec3;
 use ray::Ray;
 use hitable::HitRecord;
 use random::drand48;
-use texture::{Texture, ConstantTexture};
+use texture::Texture;
 
 // TODO: Use this instead of direct references to Material structs to make dealing with lifetimes easier (and Primatives simpler)
 // TODO: Maybe make this include a TypeId and/or create a type for storing the Materials
@@ -70,8 +70,6 @@ impl Material for Lambertian {
 }
 
 pub struct LambertianTextured<T: Texture> {
-    // TODO: Change this to be a Texture ptr - may be a bit slower but will allow sharing of textures across multiple materials
-    // TODO: OR just implement Clone on texture and/or material
     albedo: T
 }
 
@@ -81,18 +79,12 @@ impl <T: Texture> LambertianTextured<T> {
     }
 }
 
-impl LambertianTextured<ConstantTexture> {
-    pub fn new_solid(colour: Vec3) -> LambertianTextured<ConstantTexture> {
-        LambertianTextured{ albedo: ConstantTexture::new(colour) }
-    }
-}
-
 impl <T: Texture> Material for LambertianTextured<T> {
     fn scatter(&self, ray: &Ray, hit_record: &HitRecord, attenuation: &mut Vec3, scattered: &mut Ray) -> bool {
         let target = hit_record.p + hit_record.normal + random_in_unit_sphere();
 
         *scattered = Ray::new(hit_record.p, target - hit_record.p, ray.time());
-        *attenuation = self.albedo.value(0.0, 0.0, &hit_record.p);
+        *attenuation = self.albedo.value(hit_record.u, hit_record.v, &hit_record.p);
         true
     }
 }

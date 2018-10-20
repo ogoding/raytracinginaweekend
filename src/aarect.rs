@@ -24,24 +24,24 @@ impl XYRect {
 }
 
 impl Hitable for XYRect {
-    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
+    fn hit_ptr(&self, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
         let t = (self.k - ray.origin().z()) / ray.direction().z();
-        if t < t_min || t > t_max {
-            return None;
-        }
+        if t < t_min || t > t_max { return false; }
 
         let x = t.mul_add(ray.direction().x(), ray.origin().x());
         let y = t.mul_add(ray.direction().y(), ray.origin().y());
-//        let x = ray.origin().x() + t * ray.direction().x();
-//        let y = ray.origin().y() + t * ray.direction().y();
-        if x < self.x0 || x > self.x1 || y < self.y0 || y > self.y1 {
-            return None;
-        }
+        if x < self.x0 || x > self.x1 || y < self.y0 || y > self.y1 { return false; }
 
         let u = (x - self.x0) / (self.x1 - self.x0);
         let v = (y - self.y0) / (self.y1 - self.y0);
 
-        Some(HitRecord::new(t, ray.point_at_parameter(t), u, v, Vec3::new(0.0, 0.0, 1.0), self.material))
+        hit_record.t = t;
+        hit_record.p = ray.point_at_parameter(t);
+        hit_record.u = u;
+        hit_record.v = v;
+        hit_record.normal = Vec3::new(0.0, 0.0, 1.0);
+        hit_record.material = self.material;
+        true
     }
 
     fn bounding_box(&self, _t0: f32, _t1: f32) -> Option<AABBVolume> {
@@ -69,20 +69,24 @@ impl XZRect {
 }
 
 impl Hitable for XZRect {
-    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
+    fn hit_ptr(&self, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
         let t = (self.k - ray.origin().y()) / ray.direction().y();
-        if t < t_min || t > t_max { return None; }
+        if t < t_min || t > t_max { return false; }
 
         let x = t.mul_add(ray.direction().x(), ray.origin().x());
         let z = t.mul_add(ray.direction().z(), ray.origin().z());
-//        let x = ray.origin().x() + t * ray.direction().x();
-//        let z = ray.origin().z() + t * ray.direction().z();
-        if x < self.x0 || x > self.x1 || z < self.z0 || z > self.z1 { return None; }
+        if x < self.x0 || x > self.x1 || z < self.z0 || z > self.z1 { return false; }
 
         let u = (x - self.x0) / (self.x1 - self.x0);
         let v = (z - self.z0) / (self.z1 - self.z0);
 
-        Some(HitRecord::new(t, ray.point_at_parameter(t), u, v, Vec3::new(0.0, 1.0, 0.0), self.material))
+        hit_record.t = t;
+        hit_record.p = ray.point_at_parameter(t);
+        hit_record.u = u;
+        hit_record.v = v;
+        hit_record.normal = Vec3::new(0.0, 1.0, 0.0);
+        hit_record.material = self.material;
+        true
     }
 
     fn bounding_box(&self, _t0: f32, _t1: f32) -> Option<AABBVolume> {
@@ -110,20 +114,24 @@ impl YZRect {
 }
 
 impl Hitable for YZRect {
-    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
+    fn hit_ptr(&self, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
         let t = (self.k - ray.origin().x()) / ray.direction().x();
-        if t < t_min || t > t_max { return None; }
+        if t < t_min || t > t_max { return false; }
 
         let y = t.mul_add(ray.direction().y(), ray.origin().y());
         let z = t.mul_add(ray.direction().z(), ray.origin().z());
-//        let y = ray.origin().y() + t * ray.direction().y();
-//        let z = ray.origin().z() + t * ray.direction().z();
-        if y < self.y0 || y > self.y1 || z < self.z0 || z > self.z1 { return None; }
+        if y < self.y0 || y > self.y1 || z < self.z0 || z > self.z1 { return false; }
 
         let u = (y - self.y0) / (self.y1 - self.y0);
         let v = (z - self.z0) / (self.z1 - self.z0);
 
-        Some(HitRecord::new(t, ray.point_at_parameter(t), u, v, Vec3::new(1.0, 0.0, 0.0), self.material))
+        hit_record.t = t;
+        hit_record.p = ray.point_at_parameter(t);
+        hit_record.u = u;
+        hit_record.v = v;
+        hit_record.normal = Vec3::new(1.0, 0.0, 0.0);
+        hit_record.material = self.material;
+        true
     }
 
     fn bounding_box(&self, _t0: f32, _t1: f32) -> Option<AABBVolume> {

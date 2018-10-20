@@ -2,7 +2,7 @@
 
 use vec3::Vec3;
 use perlin;
-use imagers::{RgbImage};
+use imagers::RgbImage;
 
 pub trait Texture {
     fn value(&self, u: f32, v: f32, p: &Vec3) -> Vec3;
@@ -112,23 +112,17 @@ impl ImageTexture {
 impl Texture for ImageTexture {
     fn value(&self, u: f32, v: f32, p: &Vec3) -> Vec3 {
         let (nx, ny) = self.img.dimensions();
-        let mut i = u as u32 * nx;
+        let mut i = (u * nx as f32) as u32;
         let mut j = ((1.0 - v) * ny as f32 - 0.001) as u32;
-        i = i.min(0).max(nx - 1);
-        j = j.min(0).max(ny - 1);
-//        if i < 0 { i = 0 };
-//        if j < 0 { j = 0 };
-//        if i > nx - 1 { i = nx - 1 };
-//        if j > ny - 1 { j = ny - 1 };
+
+        i = i.min(nx - 1).max(0);
+        j = j.min(ny - 1).max(0);
 
         let pixel = self.img[(i as u32, j as u32)];
 
         let r = pixel[0] as f32 / 255.0;
         let g = pixel[1] as f32 / 255.0;
         let b = pixel[2] as f32 / 255.0;
-//        let r = self.data[3 * i + 3 * nx * j] / 255.0;
-//        let g = self.data[3 * i + 3 * nx * j + 1] / 255.0;
-//        let b = self.data[3 * i + 3 * nx * j + 2] / 255.0;
 
         Vec3::new(r, g, b)
     }

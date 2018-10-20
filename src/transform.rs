@@ -22,19 +22,12 @@ impl <H: Hitable> FlipNormals<H> {
 }
 
 impl <H: Hitable> Hitable for FlipNormals<H> {
-    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
-//        let hit = self.ptr.hit(ray, t_min, t_max);
-//        if let Some(hit) = self.ptr.hit(ray, t_min, t_max) {
-//            let mut hit = hit;
-//            hit.normal = -hit.normal;
-//            Some(hit)
-//        } else {
-//            None
-//        }
-
-        // TODO: Confirm that this is faster than the above code
-        let mut hit = self.ptr.hit(ray, t_min, t_max);
-        if let Some(ref mut record) = hit { record.normal = -record.normal }
+    fn hit_ptr(&self, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
+        let hit = self.ptr.hit_ptr(ray, t_min, t_max, hit_record);
+        if hit {
+//            hit_record.normal = -hit_record.normal;
+            hit_record.normal *= -1.0;
+        }
         hit
     }
 
@@ -59,19 +52,13 @@ impl <T: Hitable> Translate<T> {
 }
 
 impl <T: Hitable> Hitable for Translate<T> {
-    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
+    fn hit_ptr(&self, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
         let moved_ray = Ray::new(ray.origin() - self.offset, ray.direction(), ray.time());
-//        let hit = self.ptr.hit(ray, t_min, t_max);
-//        if let Some(hit) = self.ptr.hit(&moved_ray, t_min, t_max) {
-//            let mut hit = hit;
-//            hit.p += self.offset;
-//            Some(hit)
-//        } else {
-//            None
-//        }
-        // TODO: Confirm that this is faster than the above code
-        let mut hit = self.ptr.hit(&moved_ray, t_min, t_max);
-        if let Some(ref mut record) = hit { record.p += self.offset; }
+
+        let hit = self.ptr.hit_ptr(&moved_ray, t_min, t_max, hit_record);
+        if hit {
+            hit_record.p += self.offset;
+        }
         hit
     }
 
@@ -97,9 +84,6 @@ impl <T: Hitable> RotateY<T> {
         let sin_theta = radians.sin();
         let cos_theta = radians.cos();
 
-        // TODO: Work out if this is needed
-//        let has_box = self.ptr.bounding_box(0.0, 1.0);
-        // TODO: Work out correct default
         let aabb_box = ptr.bounding_box(0.0, 1.0).unwrap_or(AABBVolume::zero());
         let mut min = Vec3::uniform(f32::MAX);
         let mut max = Vec3::uniform(f32::MIN);
@@ -125,6 +109,7 @@ impl <T: Hitable> RotateY<T> {
         RotateY{ ptr, sin_theta, cos_theta, aabb_box: Some(AABBVolume::new(min, max)) }
     }
 
+    #[allow(dead_code)]
     pub fn new_boxed(ptr: T, angle: f32) -> Box<RotateY<T>> {
         Box::new(RotateY::new(ptr, angle))
     }
@@ -132,7 +117,7 @@ impl <T: Hitable> RotateY<T> {
 
 // FIXME: Cleanup this function
 impl <T: Hitable> Hitable for RotateY<T> {
-    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
+    fn hit_ptr(&self, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
         let ray_origin = ray.origin();
         let ray_direction = ray.direction();
 
@@ -148,21 +133,20 @@ impl <T: Hitable> Hitable for RotateY<T> {
         let rotated_ray = Ray::new(origin, direction, ray.time());
 
         // FIXME: Cleanup this function
-        if let Some(hit) = self.ptr.hit(&rotated_ray, t_min, t_max) {
-            let mut hit = hit;
-            let p = Vec3::new(self.cos_theta * hit.p.x() + self.sin_theta * hit.p.z(),
-                                    hit.p.y(),
-                                    -self.sin_theta * hit.p.x() + self.cos_theta * hit.p.z());
-            let normal = Vec3::new(self.cos_theta * hit.normal.x() + self.sin_theta * hit.normal.z(),
-                                        hit.normal.y(),
-                                        -self.sin_theta * hit.normal.x() + self.cos_theta * hit.normal.z());
+        if self.ptr.hit_ptr(&rotated_ray, t_min, t_max, hit_record) {
+            let p = Vec3::new(self.cos_theta * hit_record.p.x() + self.sin_theta * hit_record.p.z(),
+                                    hit_record.p.y(),
+                                    -self.sin_theta * hit_record.p.x() + self.cos_theta * hit_record.p.z());
+            let normal = Vec3::new(self.cos_theta * hit_record.normal.x() + self.sin_theta * hit_record.normal.z(),
+                                        hit_record.normal.y(),
+                                        -self.sin_theta * hit_record.normal.x() + self.cos_theta * hit_record.normal.z());
 
-            hit.p = p;
-            hit.normal = normal;
+            hit_record.p = p;
+            hit_record.normal = normal;
 
-            Some(hit)
+            true
         } else {
-            None
+            false
         }
     }
 

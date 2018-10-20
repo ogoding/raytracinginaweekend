@@ -217,8 +217,6 @@ pub fn make_cornell_smoke(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
     let world = HitableList::new(vec![
         FlipNormals::new_boxed(YZRect::new(0.0, 555.0, 0.0, 555.0, 555.0, 1)),       // Left plane
         YZRect::new_boxed(0.0, 555.0, 0.0, 555.0, 0.0, 0),                                // Right plane
-        //list[i++] = new xz_rect(113, 443, 127, 432, 554, light);
-        // FIXME: Update the light to match the book values (seems to bug out when using their z1 value)
         XZRect::new_boxed(113.0, 443.0, 127.0, 432.0, 554.0, 3),                          // Top light
         XZRect::new_boxed(0.0, 555.0, 0.0, 555.0, 0.0, 2),                                // Bottom plane
         FlipNormals::new_boxed(XZRect::new(0.0, 555.0, 0.0, 555.0, 555.0, 2)),       // Top plane

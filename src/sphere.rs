@@ -1,10 +1,10 @@
-use vec3::Vec3;
-use ray::Ray;
+use aabb::{surrounding_box, AABBVolume};
+use hitable::{HitRecord, Hitable};
 use material::MaterialIndex;
-use hitable::{Hitable, HitRecord};
-use aabb::{AABBVolume, surrounding_box};
+use ray::Ray;
+use vec3::Vec3;
 
-use std::f32::consts::{PI, FRAC_PI_2};
+use std::f32::consts::{FRAC_PI_2, PI};
 
 fn get_sphere_uv(p: &Vec3) -> (f32, f32) {
     let phi = p.z().atan2(p.x());
@@ -15,12 +15,16 @@ fn get_sphere_uv(p: &Vec3) -> (f32, f32) {
 pub struct Sphere {
     center: Vec3,
     radius: f32,
-    material: MaterialIndex
+    material: MaterialIndex,
 }
 
 impl Sphere {
     pub fn new(center: Vec3, radius: f32, material: MaterialIndex) -> Sphere {
-        Sphere{ center, radius, material }
+        Sphere {
+            center,
+            radius,
+            material,
+        }
     }
 
     pub fn new_boxed(center: Vec3, radius: f32, material: MaterialIndex) -> Box<Sphere> {
@@ -68,7 +72,10 @@ impl Hitable for Sphere {
     }
 
     fn bounding_box(&self, _t_min: f32, _t_max: f32) -> Option<AABBVolume> {
-        Some(AABBVolume::new(self.center - Vec3::uniform(self.radius), self.center + Vec3::uniform(self.radius)))
+        Some(AABBVolume::new(
+            self.center - Vec3::uniform(self.radius),
+            self.center + Vec3::uniform(self.radius),
+        ))
     }
 }
 
@@ -78,16 +85,39 @@ pub struct MovingSphere {
     radius: f32,
     material: MaterialIndex,
     time0: f32,
-    time1: f32
+    time1: f32,
 }
 
 impl MovingSphere {
-    pub fn new(center0: Vec3, center1: Vec3, t0: f32, t1: f32, radius: f32, material: MaterialIndex) -> MovingSphere {
-        MovingSphere{ center0, center1, radius, material, time0: t0, time1: t1 }
+    pub fn new(
+        center0: Vec3,
+        center1: Vec3,
+        t0: f32,
+        t1: f32,
+        radius: f32,
+        material: MaterialIndex,
+    ) -> MovingSphere {
+        MovingSphere {
+            center0,
+            center1,
+            radius,
+            material,
+            time0: t0,
+            time1: t1,
+        }
     }
 
-    pub fn new_boxed(center0: Vec3, center1: Vec3, t0: f32, t1: f32, radius: f32, material: MaterialIndex) -> Box<MovingSphere> {
-        Box::new(MovingSphere::new(center0, center1, t0, t1, radius, material))
+    pub fn new_boxed(
+        center0: Vec3,
+        center1: Vec3,
+        t0: f32,
+        t1: f32,
+        radius: f32,
+        material: MaterialIndex,
+    ) -> Box<MovingSphere> {
+        Box::new(MovingSphere::new(
+            center0, center1, t0, t1, radius, material,
+        ))
     }
 
     #[inline(always)]
@@ -104,7 +134,8 @@ impl MovingSphere {
 
     #[inline]
     fn center(&self, time: f32) -> Vec3 {
-        self.center0 + ((time - self.time0) / (self.time1 - self.time0)) * (self.center1 - self.center0)
+        self.center0
+            + ((time - self.time0) / (self.time1 - self.time0)) * (self.center1 - self.center0)
     }
 }
 
@@ -138,8 +169,14 @@ impl Hitable for MovingSphere {
     fn bounding_box(&self, t_min: f32, t_max: f32) -> Option<AABBVolume> {
         let center_min = self.center(t_min);
         let center_max = self.center(t_max);
-        let box0 = AABBVolume::new(center_min - Vec3::uniform(self.radius), center_min + Vec3::uniform(self.radius));
-        let box1 = AABBVolume::new(center_max - Vec3::uniform(self.radius), center_max + Vec3::uniform(self.radius));
+        let box0 = AABBVolume::new(
+            center_min - Vec3::uniform(self.radius),
+            center_min + Vec3::uniform(self.radius),
+        );
+        let box1 = AABBVolume::new(
+            center_max - Vec3::uniform(self.radius),
+            center_max + Vec3::uniform(self.radius),
+        );
 
         Some(surrounding_box(box0, box1))
     }

@@ -1,7 +1,7 @@
-use vec3::Vec3;
-use ray::Ray;
+use aabb::{surrounding_box, AABBVolume};
 use material::MaterialIndex;
-use aabb::{AABBVolume, surrounding_box};
+use ray::Ray;
+use vec3::Vec3;
 
 use std::ops::Index;
 
@@ -14,12 +14,26 @@ pub struct HitRecord {
     pub u: f32,
     pub v: f32,
     pub normal: Vec3,
-    pub material: MaterialIndex
+    pub material: MaterialIndex,
 }
 
 impl HitRecord {
-    pub fn new(t: f32, p: Vec3, u: f32, v: f32, normal: Vec3, material: MaterialIndex) -> HitRecord {
-        HitRecord{ t, p, u, v, normal, material }
+    pub fn new(
+        t: f32,
+        p: Vec3,
+        u: f32,
+        v: f32,
+        normal: Vec3,
+        material: MaterialIndex,
+    ) -> HitRecord {
+        HitRecord {
+            t,
+            p,
+            u,
+            v,
+            normal,
+            material,
+        }
     }
 
     pub fn zero() -> HitRecord {
@@ -27,21 +41,23 @@ impl HitRecord {
     }
 }
 
+// TODO: Try making an enum of all hitable things like material and texture?
 pub trait Hitable {
     fn hit_ptr(&self, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool;
     fn bounding_box(&self, t_min: f32, t_max: f32) -> Option<AABBVolume>;
 }
 
+// TODO: Rework this so that list_as_mut isn't required - Have some kind of NotYetFinalisedHitableList or MutableHitableList that is converted to an ImmutableHitableList
 // TODO: This will likely require changing internal list to Vec<Box<dyn Hitable>> or do something fancy with an untyped arena/allocator
 pub struct HitableList {
     // TODO: Do something smart with a Arena or map of typeid, Vec<SomeHitableType>
     // TODO: Try Cell/RefCell/AtomicCell or AtomicPtr or using explicit lifetimes or even a Weak or raw ptrs (not ideal)
-    list: Vec<Box<dyn Hitable>>
+    list: Vec<Box<dyn Hitable>>,
 }
 
 impl HitableList {
     pub fn new(list: Vec<Box<dyn Hitable>>) -> HitableList {
-        HitableList{ list }
+        HitableList { list }
     }
 
     pub fn len(&self) -> usize {
@@ -76,16 +92,16 @@ impl Hitable for HitableList {
     }
 
     fn bounding_box(&self, t0: f32, t1: f32) -> Option<AABBVolume> {
-        if self.list.len() > 0 {
+        if !self.list.is_empty() {
             let mut result = match self.list[0].bounding_box(t0, t1) {
                 Some(bounding_box) => bounding_box,
-                None => return None
+                None => return None,
             };
 
             for hitable in &self.list[1..] {
                 match hitable.bounding_box(t0, t1) {
                     Some(bounding_box) => result = surrounding_box(result, bounding_box),
-                    None => return None
+                    None => return None,
                 }
             }
 

@@ -4,13 +4,27 @@ version = "0.1.0"
 authors = ["Oliver Goding <olivergoding@gmail.com>"]
 
 [dependencies]
-rand = "0.5.0"
-time = "0.1.40"
+rand = "0.6.5"
+time = "0.1.42"
 xorshift = "0.1.3"
-if_chain = "0.1.2"
-lazy_static = "1.0.1"
-rayon = "1.0.2"
-image = "0.20.0"
+#if_chain = "0.1.3"
+lazy_static ="1.3.0"
+rayon = "1.0.3"
+image = "0.21.0"
+
+# simd-noise crate
+# cgmath="*"
+
+
+# slotmap crate
+# arena crate(s)
+# id-arena = { version = "0.2", default-features = false }
+# id-arena = { version = "0.2", default-features = rayon }
+# rust-typed-arena = ??
+# generational-arena = { version = "0.2", default-features = false }
+# slotmap = "0.3.0"
+# slab = "0.4.2"
+# colosseum = "0.2.2"
 
 # TODO: Use anymap of vecs to store geometry (and potentially materials/textures/etc)
 # TODO: Implement my own anymap that has Send/Sync so that rayon can work

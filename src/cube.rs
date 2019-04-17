@@ -1,10 +1,10 @@
-use vec3::Vec3;
-use ray::Ray;
-use hitable::{Hitable, HitRecord};
+use aabb::{surrounding_box, AABBVolume};
 use aarect::{XYRect, XZRect, YZRect};
-use transform::FlipNormals;
+use hitable::{HitRecord, Hitable};
 use material::MaterialIndex;
-use aabb::{AABBVolume, surrounding_box};
+use ray::Ray;
+use transform::FlipNormals;
+use vec3::Vec3;
 
 pub struct Cube {
     top: FlipNormals<XZRect>,
@@ -12,19 +12,47 @@ pub struct Cube {
     front: XYRect,
     back: FlipNormals<XYRect>,
     left: FlipNormals<YZRect>,
-    right: YZRect
+    right: YZRect,
 }
 
 impl Cube {
     pub fn new(pmin: Vec3, pmax: Vec3, mat: MaterialIndex) -> Cube {
         let front = XYRect::new(pmin.x(), pmax.x(), pmin.y(), pmax.y(), pmax.z(), mat);
-        let back = FlipNormals::new(XYRect::new(pmin.x(), pmax.x(), pmin.y(), pmax.y(), pmin.z(), mat));
+        let back = FlipNormals::new(XYRect::new(
+            pmin.x(),
+            pmax.x(),
+            pmin.y(),
+            pmax.y(),
+            pmin.z(),
+            mat,
+        ));
         let bottom = XZRect::new(pmin.x(), pmax.x(), pmin.z(), pmax.z(), pmax.y(), mat);
-        let top = FlipNormals::new(XZRect::new(pmin.x(), pmax.x(), pmin.z(), pmax.z(), pmin.y(), mat));
+        let top = FlipNormals::new(XZRect::new(
+            pmin.x(),
+            pmax.x(),
+            pmin.z(),
+            pmax.z(),
+            pmin.y(),
+            mat,
+        ));
         let right = YZRect::new(pmin.y(), pmax.y(), pmin.z(), pmax.z(), pmax.x(), mat);
-        let left = FlipNormals::new(YZRect::new(pmin.y(), pmax.y(), pmin.z(), pmax.z(), pmin.x(), mat));
+        let left = FlipNormals::new(YZRect::new(
+            pmin.y(),
+            pmax.y(),
+            pmin.z(),
+            pmax.z(),
+            pmin.x(),
+            mat,
+        ));
 
-        Cube{ top, bottom, front, back, left, right }
+        Cube {
+            top,
+            bottom,
+            front,
+            back,
+            left,
+            right,
+        }
     }
 
     #[allow(dead_code)]
@@ -40,7 +68,10 @@ impl Hitable for Cube {
         let mut closest_so_far = t_max;
 
         // TODO: Make a macro or fn to clean this up a bit
-        if self.front.hit_ptr(ray, t_min, closest_so_far, &mut temp_rec) {
+        if self
+            .front
+            .hit_ptr(ray, t_min, closest_so_far, &mut temp_rec)
+        {
             hit_anything = true;
             closest_so_far = temp_rec.t;
             *hit_record = temp_rec;
@@ -55,7 +86,10 @@ impl Hitable for Cube {
             closest_so_far = temp_rec.t;
             *hit_record = temp_rec;
         }
-        if self.bottom.hit_ptr(ray, t_min, closest_so_far, &mut temp_rec) {
+        if self
+            .bottom
+            .hit_ptr(ray, t_min, closest_so_far, &mut temp_rec)
+        {
             hit_anything = true;
             closest_so_far = temp_rec.t;
             *hit_record = temp_rec;
@@ -65,14 +99,16 @@ impl Hitable for Cube {
             closest_so_far = temp_rec.t;
             *hit_record = temp_rec;
         }
-        if self.right.hit_ptr(ray, t_min, closest_so_far, &mut temp_rec) {
+        if self
+            .right
+            .hit_ptr(ray, t_min, closest_so_far, &mut temp_rec)
+        {
             hit_anything = true;
-            closest_so_far = temp_rec.t;
+            //            closest_so_far = temp_rec.t;
             *hit_record = temp_rec;
         }
 
         hit_anything
-
     }
 
     fn bounding_box(&self, t_min: f32, t_max: f32) -> Option<AABBVolume> {

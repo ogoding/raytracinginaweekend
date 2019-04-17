@@ -12,9 +12,6 @@ Current Progress:
 
 
 ## TODO:
-* Generate output for other image formats (jpg, png, etc) and fix readme link
-* Increase image size
-* Add some support for concurrent rays - via Rayon or Faster libraries
-* Restructure hit detection and scattering to better support parallel ray tracing
 * General refactorings and renaming for clarity
+* Try using a library instead of my vec3 library
 * Implement Default instead of T::zero()

@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
 use std::fmt;
-use vec3::Vec3;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use vec3::Vec3;
 
 pub static RAY_COUNT: AtomicUsize = AtomicUsize::new(0);
 
@@ -10,18 +10,29 @@ pub static RAY_COUNT: AtomicUsize = AtomicUsize::new(0);
 pub struct Ray {
     origin: Vec3,
     direction: Vec3,
-    time: f32
+    inverse_direction: Vec3,
+    time: f32,
 }
 
 impl Ray {
     pub fn new(origin: Vec3, direction: Vec3, time: f32) -> Ray {
         RAY_COUNT.fetch_add(1, Ordering::Relaxed);
-        Ray{ origin, direction, time }
+        Ray {
+            origin,
+            direction,
+            inverse_direction: direction.recip(),
+            time,
+        }
     }
 
     pub fn zero() -> Ray {
         RAY_COUNT.fetch_add(1, Ordering::Relaxed);
-        Ray{ origin: Vec3::zero(), direction: Vec3::zero(), time: 0.0 }
+        Ray {
+            origin: Vec3::zero(),
+            direction: Vec3::zero(),
+            inverse_direction: Vec3::zero(),
+            time: 0.0,
+        }
     }
 
     pub fn origin(&self) -> Vec3 {
@@ -36,6 +47,10 @@ impl Ray {
         self.time
     }
 
+    pub fn inverse_direction(&self) -> Vec3 {
+        self.inverse_direction
+    }
+
     pub fn point_at_parameter(&self, t: f32) -> Vec3 {
         self.origin + t * self.direction
     }
@@ -43,6 +58,11 @@ impl Ray {
 
 impl fmt::Display for Ray {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "origin: {}, direction: {}", self.origin(), self.direction())
+        write!(
+            f,
+            "origin: {}, direction: {}",
+            self.origin(),
+            self.direction()
+        )
     }
 }

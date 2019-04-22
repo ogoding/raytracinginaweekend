@@ -4,9 +4,6 @@ use ray::Ray;
 use texture::Texture;
 use vec3::Vec3;
 
-pub type MaterialIndex = u16;
-pub type MaterialList = Vec<Box<Material>>;
-
 fn random_in_unit_sphere() -> Vec3 {
     loop {
         let p = 2.0 * Vec3::random() - Vec3::uniform(1.0);

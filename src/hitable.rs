@@ -1,9 +1,10 @@
 use aabb::{surrounding_box, AABBVolume};
-use material::MaterialIndex;
 use ray::Ray;
 use vec3::Vec3;
 
 use std::ops::Index;
+use std::fmt::Debug;
+use scene::{Entities, MaterialRef};
 
 #[derive(Debug, Clone, Copy)]
 pub struct HitRecord {
@@ -14,7 +15,7 @@ pub struct HitRecord {
     pub u: f32,
     pub v: f32,
     pub normal: Vec3,
-    pub material: MaterialIndex,
+    pub material: MaterialRef,
 }
 
 impl HitRecord {
@@ -24,7 +25,7 @@ impl HitRecord {
         u: f32,
         v: f32,
         normal: Vec3,
-        material: MaterialIndex,
+        material: MaterialRef,
     ) -> HitRecord {
         HitRecord {
             t,
@@ -42,13 +43,14 @@ impl HitRecord {
 }
 
 // TODO: Try making an enum of all hitable things like material and texture?
-pub trait Hitable {
-    fn hit_ptr(&self, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool;
+pub trait Hitable: Debug {
+    fn hit_ptr(&self, entities: &Entities, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool;
     fn bounding_box(&self, t_min: f32, t_max: f32) -> Option<AABBVolume>;
 }
 
 // TODO: Rework this so that list_as_mut isn't required - Have some kind of NotYetFinalisedHitableList or MutableHitableList that is converted to an ImmutableHitableList
 // TODO: This will likely require changing internal list to Vec<Box<dyn Hitable>> or do something fancy with an untyped arena/allocator
+#[derive(Debug)]
 pub struct HitableList {
     // TODO: Do something smart with a Arena or map of typeid, Vec<SomeHitableType>
     // TODO: Try Cell/RefCell/AtomicCell or AtomicPtr or using explicit lifetimes or even a Weak or raw ptrs (not ideal)
@@ -73,14 +75,14 @@ unsafe impl Send for HitableList {}
 unsafe impl Sync for HitableList {}
 
 impl Hitable for HitableList {
-    fn hit_ptr(&self, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
+    fn hit_ptr(&self, entities: &Entities, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
         let mut temp_rec = HitRecord::zero();
         let mut hit_anything = false;
         let mut closest_so_far = t_max;
 
         // Could this escape loop early? and/or be a map/reduce?
         for hitable in self.list.iter() {
-            if hitable.hit_ptr(ray, t_min, closest_so_far, &mut temp_rec) {
+            if hitable.hit_ptr(entities, ray, t_min, closest_so_far, &mut temp_rec) {
                 hit_anything = true;
                 closest_so_far = temp_rec.t;
             }

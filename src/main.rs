@@ -1,6 +1,6 @@
 //#![feature(nll)]
 // Does this need to go somewhere else?
-#![cfg_attr(test, feature(test))]
+//#![cfg_attr(test, feature(test))]
 
 // TODO: Move most of this stuff into a lib.rs?
 // TODO: run clippy and rustfmt
@@ -34,10 +34,9 @@ mod vec3;
 mod volume;
 
 use bvh::Bvh;
-use camera::Camera;
 use hitable::{HitableList, HitRecord};
 use image::{Image, RGB, new_rgb};
-use material::MaterialList;
+//use material::MaterialList;
 use random::drand48;
 use ray::{Ray, RAY_COUNT};
 use vec3::Vec3;
@@ -48,39 +47,29 @@ use time::PreciseTime;
 
 use rayon::prelude::*;
 
-use scene::Resources;
-use std::collections::HashMap;
+use scenes::load_scene;
+use scene::{Window, Scene, Resources};
 
 const MAX_RAY_DEPTH: u8 = 50;
 
 fn trace_ray(
     ray: &Ray,
-    world: &HitableList,
+    world: &Resources,
     bvh: &Bvh,
-    materials: &MaterialList,
-//    resources: &Resources,
     depth: u8,
 ) -> Vec3 {
-    // TODO: Test if this is faster or not
-//    let mut hit_record = HitRecord::zero();
-//    if bvh.hit(world, ray, 0.001, std::f32::MAX, &mut hit_record) {
-    if let Some(hit_record) = bvh.hit(world, ray, 0.001, std::f32::MAX) {
+    let mut hit_record = HitRecord::zero();
+    if bvh.hit(&world.entities, ray, 0.001, std::f32::MAX, &mut hit_record) {
         let mut scattered = Ray::zero();
         let mut attenuation = Vec3::zero();
 
-        // TODO: Instead of using Index trait, use a method like scene.get_material(usize) so that the same pattern can be applied to the geometry/primatives/hitables themselves
-        // TODO: After changing HitRecord and other Primitives to use a raw MaterialIndex, Retrieve texture+material here (and default to an error material + texture)
-        let material = &materials[hit_record.material as usize];
-        let emitted = material.emitted(hit_record.u, hit_record.v, &hit_record.p);
-//        let material = resources.get_material(hit_record.material as usize);
-//        let emitted = material.emitted(&resources.textures, hit_record.u, hit_record.v, &hit_record.p);
+        let material = world.get_material(hit_record.material as usize);
+        let emitted = material.emitted(&world.textures, hit_record.u, hit_record.v, &hit_record.p);
 
         if depth < MAX_RAY_DEPTH
-            && material.scatter(ray, &hit_record, &mut attenuation, &mut scattered)
-//            && material.scatter(&resources.textures, ray, &hit_record, &mut attenuation, &mut scattered)
+            && material.scatter(&world.textures, ray, &hit_record, &mut attenuation, &mut scattered)
         {
-            emitted + attenuation * trace_ray(&scattered, world, bvh, materials, depth + 1)
-//            emitted + attenuation * trace_ray(&scattered, world, bvh, resources, depth + 1)
+            emitted + attenuation * trace_ray(&scattered, world, bvh, depth + 1)
         } else {
             emitted
 //                        Vec3::zero()
@@ -101,29 +90,25 @@ fn gamma(vec: Vec3) -> Vec3 {
 // TODO: Change this to only take in pixel index + scene + window structs
 fn calculate_pixel(
     index: usize,
-    width: usize,
-    height: usize,
-    samples: usize,
-    world: &HitableList,
+    window: &Window,
+    scene: &Scene,
     bvh: &Bvh,
-    materials: &MaterialList,
-//    resources: &Resources,
-    cam: &Camera,
 ) -> RGB {
+    let width = window.width as usize;
+    let height = window.height as usize;
     let col = index % width;
     let row = height - 1 - (index / width);
 
     let mut colour = Vec3::zero();
-    for _ in 0..samples {
+    for _ in 0..window.samples {
         let u = (col as f32 + drand48()) / width as f32;
         let v = (row as f32 + drand48()) / height as f32;
-        let r = cam.get_ray(u, v);
+        let r = window.camera.get_ray(u, v);
 
-        colour += trace_ray(&r, world, bvh, &materials, 0);
-//        colour += trace_ray(&r, world, bvh, resources, 0);
+        colour += trace_ray(&r, &scene.resources, bvh, 0);
     }
 
-    colour = gamma(colour / samples as f32);
+    colour = gamma(colour / window.samples as f32);
 
 //    RGB::new_scaled(colour.r(), colour.g(), colour.b())
     new_rgb(colour.r(), colour.g(), colour.b())
@@ -147,21 +132,18 @@ fn calculate_pixel(
 // TODO: make the buffer of x * y * samples long
 // TODO: Check batches of rays progressively against bvh - e.g. group them together to avoid redundant bvh checks
 
-fn run() {
+fn run() -> Result<(), String> {
     let nx: usize = 600;
     let ny: usize = 400;
     let ns: usize = 100;
 
-    use scene::{Scene, Window};
-    use scenes::load_scene;
-
-    let scene = "cornell_box";
+    let scene = "cornell_smoke";
     let (mut scene, window) = load_scene(scene, nx as u32, ny as u32, ns as u32)?;
-    let bvh = Bvh::new(&mut scene.world, 0.0, 1.0);
+    let bvh = Bvh::new(&mut scene.resources.entities, 0.0, 1.0);
 
     assert!(
-//        (scene.resources.materials.len() as u16) < u16::MAX,
-        (scene.materials.len() as u16) < u16::MAX,
+        (scene.resources.materials.len() as u16) < u16::MAX,
+//        (scene.materials.len() as u16) < u16::MAX,
         format!("The maximum supported number of materials is {}", u16::MAX)
     );
 
@@ -173,19 +155,13 @@ fn run() {
 
     // Is this the best way to do it? or is parallelism over sub images/tiles better?
     let pixels: Vec<RGB> = (0..nx * ny)
-//        .into_par_iter()
-                .into_iter()
+        .into_par_iter()
         .map(|idx| {
             calculate_pixel(
                 idx,
-                window.width as usize,
-                window.height as usize,
-                window.samples as usize,
-                &scene.world,
+                &window,
+                &scene,
                 &bvh,
-                &scene.materials,
-//                &scene.resources,
-                &window.camera,
             )
         })
         .collect();
@@ -202,13 +178,16 @@ fn run() {
         RAY_COUNT.load(Ordering::Relaxed) as f32 / duration
     );
 
-    image.save("images/current_progress.jpg");
+    match image.save("images/current_progress.jpg") {
+        Ok(()) => Ok(()),
+        Err(e) => Err(e.to_string())
+    }
 }
 
-fn main() {
-    run();
+fn main() -> Result<(), String> {
+    run()
+
 }
 
-// TODO: Remaining Chapters of Book 2
-// TODO: 8: Volumes - Fix the weird lighting artifacts that are going on (happening in make_simple_light_scene too)
-// TODO: 9: A Scene Testing - All new features
+// FIXME: Lighting still seems to be a bit broken - lots of randomly coloured pixels
+

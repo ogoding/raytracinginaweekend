@@ -27,7 +27,7 @@ fn ffmax(a: f32, b: f32) -> f32 {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Vec3 {
     data: [f32; 3],
 }

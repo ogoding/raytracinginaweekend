@@ -1,20 +1,21 @@
 use aabb::AABBVolume;
-use hitable::{HitRecord, Hitable};
-use material::MaterialIndex;
+use hitable::{HitRecord, HitableList, Hitable};
+use scene::{Entities, MaterialRef};
 use random::drand48;
 use ray::Ray;
 use vec3::Vec3;
 
 use std::f32;
 
+#[derive(Debug)]
 pub struct ConstantMedium<H: Hitable> {
     boundary: H,
     density: f32,
-    phase_function: MaterialIndex,
+    phase_function: MaterialRef,
 }
 
 impl<H: Hitable> ConstantMedium<H> {
-    fn new(boundary: H, density: f32, phase_function: MaterialIndex) -> ConstantMedium<H> {
+    pub fn new(boundary: H, density: f32, phase_function: MaterialRef) -> ConstantMedium<H> {
         ConstantMedium {
             boundary,
             density,
@@ -25,21 +26,21 @@ impl<H: Hitable> ConstantMedium<H> {
     pub fn new_boxed(
         boundary: H,
         density: f32,
-        phase_function: MaterialIndex,
+        phase_function: MaterialRef,
     ) -> Box<ConstantMedium<H>> {
         Box::new(ConstantMedium::new(boundary, density, phase_function))
     }
 }
 
 impl<H: Hitable> Hitable for ConstantMedium<H> {
-    fn hit_ptr(&self, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
+    fn hit_ptr(&self, entities: &Entities, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
         let mut hit1 = HitRecord::zero();
         let mut hit2 = HitRecord::zero();
 
-        if self.boundary.hit_ptr(ray, f32::MIN, f32::MAX, &mut hit1)
+        if self.boundary.hit_ptr(entities, ray, f32::MIN, f32::MAX, &mut hit1)
             && self
                 .boundary
-                .hit_ptr(ray, hit1.t + 0.0001, f32::MAX, &mut hit2)
+                .hit_ptr(entities, ray, hit1.t + 0.0001, f32::MAX, &mut hit2)
         {
             if hit1.t < t_min {
                 hit1.t = t_min;

@@ -34,8 +34,9 @@ pub fn surrounding_box(box0: AABBVolume, box1: AABBVolume) -> AABBVolume {
     }
 }
 
-// TODO: Add proper credit for this function
-// FIXME: Why does this result in fewer rays than original?
+// FIXME: Why does this result in fewer rays than previous approach?
+// Credit to Majercik et al. - http://jcgt.org/published/0007/03/04/
+#[inline(always)]
 fn slabs(aabb_min: Vec3, aabb_max: Vec3, ray_origin: Vec3, inv_ray_dir: Vec3) -> bool {
     let t0 = (aabb_min - ray_origin) * inv_ray_dir;
     let t1 = (aabb_max - ray_origin) * inv_ray_dir;
@@ -46,7 +47,7 @@ fn slabs(aabb_min: Vec3, aabb_max: Vec3, ray_origin: Vec3, inv_ray_dir: Vec3) ->
     tmin.max_component() <= tmax.min_component()
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct AABBVolume {
     min: Vec3,
     max: Vec3,
@@ -72,7 +73,7 @@ impl AABBVolume {
         self.max
     }
 
-    pub fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> bool {
+    pub fn hit(&self, ray: &Ray, _t_min: f32, _t_max: f32) -> bool {
         slabs(self.min, self.max, ray.origin(), ray.inverse_direction())
     }
 }

@@ -13,6 +13,7 @@ fn random_in_unit_disk() -> Vec3 {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 #[derive(Debug)]
 pub struct Camera {
     origin: Vec3,
@@ -28,6 +29,7 @@ pub struct Camera {
 }
 
 impl Camera {
+    #[allow(clippy::too_many_arguments)]
     // vfov is top to bottom in degrees
     pub fn new(
         lookfrom: Vec3,

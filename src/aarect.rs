@@ -1,20 +1,21 @@
 use aabb::AABBVolume;
-use hitable::{HitRecord, Hitable};
-use material::MaterialIndex;
+use hitable::{HitRecord, HitableList, Hitable};
+use scene::{Entities, MaterialRef};
 use ray::Ray;
 use vec3::Vec3;
 
+#[derive(Debug)]
 pub struct XYRect {
     x0: f32,
     x1: f32,
     y0: f32,
     y1: f32,
     k: f32,
-    material: MaterialIndex,
+    material: MaterialRef,
 }
 
 impl XYRect {
-    pub fn new(x0: f32, x1: f32, y0: f32, y1: f32, k: f32, material: MaterialIndex) -> XYRect {
+    pub fn new(x0: f32, x1: f32, y0: f32, y1: f32, k: f32, material: MaterialRef) -> XYRect {
         XYRect {
             x0,
             x1,
@@ -31,14 +32,14 @@ impl XYRect {
         y0: f32,
         y1: f32,
         k: f32,
-        material: MaterialIndex,
+        material: MaterialRef,
     ) -> Box<XYRect> {
         Box::new(XYRect::new(x0, x1, y0, y1, k, material))
     }
 }
 
 impl Hitable for XYRect {
-    fn hit_ptr(&self, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
+    fn hit_ptr(&self, _entities: &Entities, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
         let t = (self.k - ray.origin().z()) / ray.direction().z();
         if t < t_min || t > t_max {
             return false;
@@ -70,17 +71,18 @@ impl Hitable for XYRect {
     }
 }
 
+#[derive(Debug)]
 pub struct XZRect {
     x0: f32,
     x1: f32,
     z0: f32,
     z1: f32,
     k: f32,
-    material: MaterialIndex,
+    material: MaterialRef,
 }
 
 impl XZRect {
-    pub fn new(x0: f32, x1: f32, z0: f32, z1: f32, k: f32, material: MaterialIndex) -> XZRect {
+    pub fn new(x0: f32, x1: f32, z0: f32, z1: f32, k: f32, material: MaterialRef) -> XZRect {
         XZRect {
             x0,
             x1,
@@ -97,14 +99,14 @@ impl XZRect {
         z0: f32,
         z1: f32,
         k: f32,
-        material: MaterialIndex,
+        material: MaterialRef,
     ) -> Box<XZRect> {
         Box::new(XZRect::new(x0, x1, z0, z1, k, material))
     }
 }
 
 impl Hitable for XZRect {
-    fn hit_ptr(&self, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
+    fn hit_ptr(&self, _entities: &Entities, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
         let t = (self.k - ray.origin().y()) / ray.direction().y();
         if t < t_min || t > t_max {
             return false;
@@ -136,17 +138,18 @@ impl Hitable for XZRect {
     }
 }
 
+#[derive(Debug)]
 pub struct YZRect {
     y0: f32,
     y1: f32,
     z0: f32,
     z1: f32,
     k: f32,
-    material: MaterialIndex,
+    material: MaterialRef,
 }
 
 impl YZRect {
-    pub fn new(y0: f32, y1: f32, z0: f32, z1: f32, k: f32, material: MaterialIndex) -> YZRect {
+    pub fn new(y0: f32, y1: f32, z0: f32, z1: f32, k: f32, material: MaterialRef) -> YZRect {
         YZRect {
             y0,
             y1,
@@ -163,14 +166,14 @@ impl YZRect {
         z0: f32,
         z1: f32,
         k: f32,
-        material: MaterialIndex,
+        material: MaterialRef,
     ) -> Box<YZRect> {
         Box::new(YZRect::new(y0, y1, z0, z1, k, material))
     }
 }
 
 impl Hitable for YZRect {
-    fn hit_ptr(&self, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
+    fn hit_ptr(&self, _entities: &Entities, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
         let t = (self.k - ray.origin().x()) / ray.direction().x();
         if t < t_min || t > t_max {
             return false;

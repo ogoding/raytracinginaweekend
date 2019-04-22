@@ -8,6 +8,7 @@ use std::ops::{
     Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
 };
 use std::str::FromStr;
+use cgmath::*;
 
 #[inline]
 fn ffmin(a: f32, b: f32) -> f32 {
@@ -29,7 +30,7 @@ fn ffmax(a: f32, b: f32) -> f32 {
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Vec3 {
-    data: [f32; 3],
+    data: Vector3<f32>
 }
 
 impl Vec3 {
@@ -54,7 +55,7 @@ impl Vec3 {
     }
 
     pub fn new(d0: f32, d1: f32, d2: f32) -> Vec3 {
-        Vec3 { data: [d0, d1, d2] }
+        Vec3 { data: Vector3::new(d0, d1, d2) }
     }
 
     pub fn recip(&self) -> Vec3 {
@@ -94,37 +95,26 @@ impl Vec3 {
     }
 
     pub fn length(&self) -> f32 {
-        self.squared_length().sqrt()
+        self.data.magnitude()
     }
 
     pub fn squared_length(&self) -> f32 {
-        Vec3::dot(self, self)
+        self.data.magnitude2()
     }
 
     // TODO: rename to convert_to_unit
     pub fn make_unit_vector(&mut self) {
-        //        let k = 1.0 / self.length();
-        let k = self.length().recip();
-        *self *= k;
+        self.data.normalize();
     }
-
-//    pub fn sum(&self) -> f32 {
-//        self[0] + self[1] + self[2]
-//    }
 
     // TODO Change this to be Vec3 instead of &Vec3?
     pub fn dot(v1: &Vec3, v2: &Vec3) -> f32 {
-//        (*v1 + *v2).sum()
-        v1.x() * v2.x() + v1.y() * v2.y() + v1.z() * v2.z()
+        v1.data.dot(v2.data)
     }
 
     // TODO Change this to be Vec3 instead of &Vec3?
     pub fn cross(v1: &Vec3, v2: &Vec3) -> Vec3 {
-        Vec3::new(
-            v1.y() * v2.z() - v1.z() * v2.y(),
-            -(v1.x() * v2.z() - v1.z() * v2.x()),
-            v1.x() * v2.y() - v1.y() * v2.x(),
-        )
+        Vec3{ data: v1.data.cross(v2.data) }
     }
 
     pub fn x(&self) -> f32 {
@@ -194,7 +184,9 @@ impl Neg for Vec3 {
     type Output = Vec3;
 
     fn neg(self) -> Vec3 {
-        Vec3::new(-self.x(), -self.y(), -self.z())
+        Vec3 {
+            data: -self.data
+        }
     }
 }
 
@@ -202,7 +194,9 @@ impl Add<Vec3> for f32 {
     type Output = Vec3;
 
     fn add(self, other: Vec3) -> Vec3 {
-        Vec3::new(self + other.x(), self + other.y(), self + other.z())
+        Vec3 {
+            data: other.data.add_element_wise(Vector3::new(self, self, self))
+        }
     }
 }
 
@@ -210,21 +204,15 @@ impl Add<Vec3> for Vec3 {
     type Output = Vec3;
 
     fn add(self, other: Vec3) -> Vec3 {
-        Vec3::new(
-            self.x() + other.x(),
-            self.y() + other.y(),
-            self.z() + other.z(),
-        )
+        Vec3 {
+            data: self.data.add_element_wise(other.data)
+        }
     }
 }
 
 impl AddAssign for Vec3 {
     fn add_assign(&mut self, other: Vec3) {
-        *self = Vec3::new(
-            self.x() + other.x(),
-            self.y() + other.y(),
-            self.z() + other.z(),
-        );
+        self.data.add_assign_element_wise(other.data);
     }
 }
 
@@ -232,21 +220,16 @@ impl Sub for Vec3 {
     type Output = Vec3;
 
     fn sub(self, other: Vec3) -> Vec3 {
-        Vec3::new(
-            self.x() - other.x(),
-            self.y() - other.y(),
-            self.z() - other.z(),
-        )
+        Vec3 {
+            data: self.data.sub_element_wise(other.data)
+        }
     }
 }
 
 impl SubAssign for Vec3 {
     fn sub_assign(&mut self, other: Vec3) {
-        *self = Vec3::new(
-            self.x() - other.x(),
-            self.y() - other.y(),
-            self.z() - other.z(),
-        );
+        self.data.sub_assign_element_wise(other.data);
+
     }
 }
 
@@ -254,7 +237,9 @@ impl Mul<Vec3> for f32 {
     type Output = Vec3;
 
     fn mul(self, other: Vec3) -> Vec3 {
-        Vec3::new(self * other.x(), self * other.y(), self * other.z())
+        Vec3 {
+            data: self * other.data
+        }
     }
 }
 
@@ -262,13 +247,15 @@ impl Mul<f32> for Vec3 {
     type Output = Vec3;
 
     fn mul(self, other: f32) -> Vec3 {
-        Vec3::new(self.x() * other, self.y() * other, self.z() * other)
+        Vec3 {
+            data: self.data * other
+        }
     }
 }
 
 impl MulAssign<f32> for Vec3 {
     fn mul_assign(&mut self, other: f32) {
-        *self = Vec3::new(self.x() * other, self.y() * other, self.z() * other);
+        self.data *= other;
     }
 }
 
@@ -276,21 +263,15 @@ impl Mul<Vec3> for Vec3 {
     type Output = Vec3;
 
     fn mul(self, other: Vec3) -> Vec3 {
-        Vec3::new(
-            self.x() * other.x(),
-            self.y() * other.y(),
-            self.z() * other.z(),
-        )
+        Vec3 {
+            data: self.data.mul_element_wise(other.data)
+        }
     }
 }
 
 impl MulAssign<Vec3> for Vec3 {
     fn mul_assign(&mut self, other: Vec3) {
-        *self = Vec3::new(
-            self.x() * other.x(),
-            self.y() * other.y(),
-            self.z() * other.z(),
-        );
+        self.data.mul_assign_element_wise(other.data);
     }
 }
 
@@ -298,13 +279,15 @@ impl Div<f32> for Vec3 {
     type Output = Vec3;
 
     fn div(self, other: f32) -> Vec3 {
-        Vec3::new(self.x() / other, self.y() / other, self.z() / other)
+        Vec3 {
+            data: self.data / other
+        }
     }
 }
 
 impl DivAssign<f32> for Vec3 {
     fn div_assign(&mut self, other: f32) {
-        *self = Vec3::new(self.x() / other, self.y() / other, self.z() / other);
+        self.data /= other;
     }
 }
 
@@ -312,20 +295,14 @@ impl Div<Vec3> for Vec3 {
     type Output = Vec3;
 
     fn div(self, other: Vec3) -> Vec3 {
-        Vec3::new(
-            self.x() / other.x(),
-            self.y() / other.y(),
-            self.z() / other.z(),
-        )
+        Vec3 {
+            data: self.data.div_element_wise(other.data)
+        }
     }
 }
 
 impl DivAssign<Vec3> for Vec3 {
     fn div_assign(&mut self, other: Vec3) {
-        *self = Vec3::new(
-            self.x() / other.x(),
-            self.y() / other.y(),
-            self.z() / other.z(),
-        );
+        self.data.div_assign_element_wise(other.data);
     }
 }

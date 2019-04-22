@@ -13,6 +13,8 @@ extern crate lazy_static;
 extern crate image as imagers;
 extern crate rayon;
 
+extern crate cgmath;
+
 
 mod aabb;
 mod aarect;
@@ -137,7 +139,7 @@ fn run() -> Result<(), String> {
     let ny: usize = 400;
     let ns: usize = 100;
 
-    let scene = "cornell_smoke";
+    let scene = "cornell_box";
     let (mut scene, window) = load_scene(scene, nx as u32, ny as u32, ns as u32)?;
     let bvh = Bvh::new(&mut scene.resources.entities, 0.0, 1.0);
 

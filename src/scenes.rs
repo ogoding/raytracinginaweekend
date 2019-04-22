@@ -224,15 +224,15 @@ pub fn make_earth_scene(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
 #[allow(dead_code)]
 pub fn make_simple_light_scene(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
     let mut resources = Resources::new();
-    resources.new_texture(TextureEnum::ScaledTurbulencePerlin(4.0));
-    resources.new_material(MaterialEnum::LambertianTextured(0));
-    resources.new_texture(TextureEnum::Constant(Vec3::uniform(4.0)));
-    resources.new_material(MaterialEnum::DiffuseLight(1));
+    let perlin_t = resources.new_texture(TextureEnum::ScaledTurbulencePerlin(4.0));
+    let perlin = resources.new_material(MaterialEnum::LambertianTextured(perlin_t));
+    let light_t = resources.new_texture(TextureEnum::Constant(Vec3::uniform(4.0)));
+    let light = resources.new_material(MaterialEnum::DiffuseLight(light_t));
 
-    resources.new_entity(Sphere::new(Vec3::new(0.0, -1000.0, 0.0), 1000.0, 0));
-    resources.new_entity(Sphere::new(Vec3::new(0.0, 2.0, 0.0), 2.0, 0));
-    resources.new_entity(Sphere::new(Vec3::new(0.0, 7.0, 0.0), 2.0, 1));
-    resources.new_entity(XYRect::new(3.0, 5.0, 1.0, 3.0, -2.0, 1));
+    resources.new_entity(Sphere::new(Vec3::new(0.0, -1000.0, 0.0), 1000.0, perlin));
+    resources.new_entity(Sphere::new(Vec3::new(0.0, 2.0, 0.0), 2.0, perlin));
+    resources.new_entity(Sphere::new(Vec3::new(0.0, 7.0, 0.0), 2.0, light));
+    resources.new_entity(XYRect::new(3.0, 5.0, 1.0, 3.0, -2.0, light));
 
     (
         Scene::new(resources),

@@ -35,10 +35,9 @@ mod transform;
 mod vec3;
 mod volume;
 
-use bvh::Bvh;
-use hitable::{HitableList, HitRecord};
+use bvh::{CompactBvh, Bvh};
+use hitable::HitRecord;
 use image::{Image, RGB, new_rgb};
-//use material::MaterialList;
 use random::drand48;
 use ray::{Ray, RAY_COUNT};
 use vec3::Vec3;
@@ -58,6 +57,7 @@ fn trace_ray(
     ray: &Ray,
     world: &Resources,
     bvh: &Bvh,
+//    bvh: &CompactBvh,
     depth: u8,
 ) -> Vec3 {
     let mut hit_record = HitRecord::zero();
@@ -89,12 +89,12 @@ fn gamma(vec: Vec3) -> Vec3 {
     Vec3::new(vec.x().sqrt(), vec.y().sqrt(), vec.z().sqrt())
 }
 
-// TODO: Change this to only take in pixel index + scene + window structs
 fn calculate_pixel(
     index: usize,
     window: &Window,
     scene: &Scene,
     bvh: &Bvh,
+//    bvh: &CompactBvh,
 ) -> RGB {
     let width = window.width as usize;
     let height = window.height as usize;
@@ -116,31 +116,16 @@ fn calculate_pixel(
     new_rgb(colour.r(), colour.g(), colour.b())
 }
 
-// TODO: Do a breadth based trace implementation
-// for each pixel create a RGB pixel (0,0,0 to start?)
-// also create a ray + sample count
-//struct Pixel {
-//    rgb: Vec3
-//}
-//
-//struct RayBuffer {
-//    // TODO: Reformat into SoA style
-//    buffer: Vec<Ray>
-//    // ray_x: Vec<f32>
-//    // ray_y: Vec<f32>
-//    // ray_z: Vec<f32>
-//}
-//
-// TODO: make the buffer of x * y * samples long
-// TODO: Check batches of rays progressively against bvh - e.g. group them together to avoid redundant bvh checks
-
 fn run() -> Result<(), String> {
-    let nx: usize = 600;
+    let nx: usize = 400;
     let ny: usize = 400;
     let ns: usize = 100;
 
-    let scene = "cornell_box";
+    let scene = "simple_light";
+//    let scene = "cornell_box";
+//    let scene = "final_scene";
     let (mut scene, window) = load_scene(scene, nx as u32, ny as u32, ns as u32)?;
+//    let bvh = CompactBvh::new(&mut scene.resources.entities, 0.0, 1.0);
     let bvh = Bvh::new(&mut scene.resources.entities, 0.0, 1.0);
 
     assert!(
@@ -155,8 +140,14 @@ fn run() -> Result<(), String> {
     // TODO: Implement a version of this that builds buffers of rays to process (maybe store as SoA?)
     // TODO: How to handle multiple types of Hitable object? Turn everything into meshes/triangles? How would spheres be done?
 
+    // TODO: Rewrite this range -> Image logic to allocate the image at the start and write into appropriate cells
+
+    // TODO: Work out whether rayon is adding any overhead
     // Is this the best way to do it? or is parallelism over sub images/tiles better?
-    let pixels: Vec<RGB> = (0..nx * ny)
+    let indexes: Vec<usize> = (0..nx * ny).collect();
+    let pixels: Vec<RGB> = indexes
+//    let pixels: Vec<RGB> = (0..nx * ny)
+//        .into_iter()
         .into_par_iter()
         .map(|idx| {
             calculate_pixel(
@@ -190,6 +181,3 @@ fn main() -> Result<(), String> {
     run()
 
 }
-
-// FIXME: Lighting still seems to be a bit broken - lots of randomly coloured pixels
-

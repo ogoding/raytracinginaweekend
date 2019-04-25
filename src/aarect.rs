@@ -1,5 +1,5 @@
 use aabb::AABBVolume;
-use hitable::{HitRecord, HitableList, Hitable};
+use hitable::{HitRecord, Hitable};
 use scene::{Entities, MaterialRef};
 use ray::Ray;
 use vec3::Vec3;
@@ -24,17 +24,6 @@ impl XYRect {
             k,
             material,
         }
-    }
-
-    pub fn new_boxed(
-        x0: f32,
-        x1: f32,
-        y0: f32,
-        y1: f32,
-        k: f32,
-        material: MaterialRef,
-    ) -> Box<XYRect> {
-        Box::new(XYRect::new(x0, x1, y0, y1, k, material))
     }
 }
 
@@ -92,17 +81,6 @@ impl XZRect {
             material,
         }
     }
-
-    pub fn new_boxed(
-        x0: f32,
-        x1: f32,
-        z0: f32,
-        z1: f32,
-        k: f32,
-        material: MaterialRef,
-    ) -> Box<XZRect> {
-        Box::new(XZRect::new(x0, x1, z0, z1, k, material))
-    }
 }
 
 impl Hitable for XZRect {
@@ -158,17 +136,6 @@ impl YZRect {
             k,
             material,
         }
-    }
-
-    pub fn new_boxed(
-        y0: f32,
-        y1: f32,
-        z0: f32,
-        z1: f32,
-        k: f32,
-        material: MaterialRef,
-    ) -> Box<YZRect> {
-        Box::new(YZRect::new(y0, y1, z0, z1, k, material))
     }
 }
 

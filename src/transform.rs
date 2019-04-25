@@ -1,5 +1,5 @@
 use aabb::AABBVolume;
-use hitable::{HitRecord, HitableList, Hitable};
+use hitable::{HitRecord, Hitable};
 use scene::Entities;
 use ray::Ray;
 use vec3::Vec3;
@@ -16,10 +16,6 @@ pub struct FlipNormals<H> {
 impl<H: Hitable> FlipNormals<H> {
     pub fn new(ptr: H) -> FlipNormals<H> {
         FlipNormals { ptr }
-    }
-
-    pub fn new_boxed(ptr: H) -> Box<FlipNormals<H>> {
-        Box::new(FlipNormals::new(ptr))
     }
 }
 
@@ -47,10 +43,6 @@ pub struct Translate<T: Hitable> {
 impl<T: Hitable> Translate<T> {
     pub fn new(ptr: T, offset: Vec3) -> Translate<T> {
         Translate { ptr, offset }
-    }
-
-    pub fn new_boxed(ptr: T, offset: Vec3) -> Box<Translate<T>> {
-        Box::new(Translate::new(ptr, offset))
     }
 }
 
@@ -124,11 +116,6 @@ impl<T: Hitable> RotateY<T> {
             cos_theta,
             aabb_box: Some(AABBVolume::new(min, max)),
         }
-    }
-
-    #[allow(dead_code)]
-    pub fn new_boxed(ptr: T, angle: f32) -> Box<RotateY<T>> {
-        Box::new(RotateY::new(ptr, angle))
     }
 }
 

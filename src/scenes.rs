@@ -6,8 +6,8 @@ use vec3::Vec3;
 
 use scene::{Scene, Window};
 use scene::{Resources, MaterialRef};
-use material::MaterialEnum;
-use texture::TextureEnum;
+use material::Material;
+use texture::Texture;
 use sphere::{Sphere, MovingSphere};
 use volume::ConstantMedium;
 use random::drand48;
@@ -72,10 +72,10 @@ fn make_default_camera(nx: u32, ny: u32) -> Camera {
 #[allow(dead_code)]
 pub fn make_scene(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
     let mut resources = Resources::new();
-    resources.new_material(MaterialEnum::Lambertian(Vec3::new(0.1, 0.2, 0.5)));
-    resources.new_material(MaterialEnum::Lambertian(Vec3::new(0.8, 0.8, 0.0)));
-    resources.new_material(MaterialEnum::Metal(Vec3::new(0.8, 0.6, 0.2), 0.3));
-    resources.new_material(MaterialEnum::Dieletric(1.5));
+    resources.new_material(Material::Lambertian(Vec3::new(0.1, 0.2, 0.5)));
+    resources.new_material(Material::Lambertian(Vec3::new(0.8, 0.8, 0.0)));
+    resources.new_material(Material::Metal(Vec3::new(0.8, 0.6, 0.2), 0.3));
+    resources.new_material(Material::Dieletric(1.5));
 
     resources.new_entity(Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5, 0));
     resources.new_entity(Sphere::new(Vec3::new(0.0, -100.5, -1.0), 100.0, 1));
@@ -92,13 +92,13 @@ pub fn make_scene(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
 #[allow(dead_code)]
 pub fn make_random_scene(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
     let mut resources = Resources::new();
-    resources.new_texture(TextureEnum::Constant(Vec3::new(0.2, 0.3, 0.1)));
-    resources.new_texture(TextureEnum::Constant(Vec3::uniform(0.9)));
-    let tex = resources.new_texture(TextureEnum::Checker(0, 1));
-    resources.new_material(MaterialEnum::LambertianTextured(tex));
-    resources.new_material(MaterialEnum::Dieletric(1.5));
-    resources.new_material(MaterialEnum::Lambertian(Vec3::new(0.4, 0.2, 0.1)));
-    resources.new_material(MaterialEnum::Metal(Vec3::new(0.7, 0.6, 0.5), 0.0));
+    resources.new_texture(Texture::Constant(Vec3::new(0.2, 0.3, 0.1)));
+    resources.new_texture(Texture::Constant(Vec3::uniform(0.9)));
+    let tex = resources.new_texture(Texture::Checker(0, 1));
+    resources.new_material(Material::LambertianTextured(tex));
+    resources.new_material(Material::Dieletric(1.5));
+    resources.new_material(Material::Lambertian(Vec3::new(0.4, 0.2, 0.1)));
+    resources.new_material(Material::Metal(Vec3::new(0.7, 0.6, 0.5), 0.0));
 
     resources.new_entity(Sphere::new(Vec3::new(0.0, -1000.0, 0.0), 1000.0, 0));
     resources.new_entity(Sphere::new(Vec3::new(0.0, 1.0, 0.0), 1.0, 1));
@@ -111,11 +111,11 @@ pub fn make_random_scene(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
             let center = Vec3::new(a as f32 + 0.9 * drand48(), 0.2, b as f32 + 0.9 * drand48());
             if (center - Vec3::new(4.0, 0.2, 0.0)).length() > 0.9 {
                 let material = if choose_mat < 0.8 {
-                    resources.new_material(MaterialEnum::Lambertian(Vec3::random() * Vec3::random()))
+                    resources.new_material(Material::Lambertian(Vec3::random() * Vec3::random()))
                 } else if choose_mat < 0.95 {
-                    resources.new_material(MaterialEnum::Metal(0.5 * (1.0 + Vec3::random()), 0.5 * drand48()))
+                    resources.new_material(Material::Metal(0.5 * (1.0 + Vec3::random()), 0.5 * drand48()))
                 } else {
-                    resources.new_material(MaterialEnum::Dieletric(1.5))
+                    resources.new_material(Material::Dieletric(1.5))
                 };
 
                 resources.new_entity(Sphere::new(center, 0.2, material as MaterialRef));
@@ -132,13 +132,13 @@ pub fn make_random_scene(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
 #[allow(dead_code)]
 pub fn make_random_moving_scene(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
     let mut resources = Resources::new();
-    resources.new_texture(TextureEnum::Constant(Vec3::new(0.2, 0.3, 0.1)));
-    resources.new_texture(TextureEnum::Constant(Vec3::uniform(0.9)));
-    let tex = resources.new_texture(TextureEnum::Checker(0, 1));
-    resources.new_material(MaterialEnum::LambertianTextured(tex));
-    resources.new_material(MaterialEnum::Dieletric(1.5));
-    resources.new_material(MaterialEnum::Lambertian(Vec3::new(0.4, 0.2, 0.1)));
-    resources.new_material(MaterialEnum::Metal(Vec3::new(0.7, 0.6, 0.5), 0.0));
+    resources.new_texture(Texture::Constant(Vec3::new(0.2, 0.3, 0.1)));
+    resources.new_texture(Texture::Constant(Vec3::uniform(0.9)));
+    let tex = resources.new_texture(Texture::Checker(0, 1));
+    resources.new_material(Material::LambertianTextured(tex));
+    resources.new_material(Material::Dieletric(1.5));
+    resources.new_material(Material::Lambertian(Vec3::new(0.4, 0.2, 0.1)));
+    resources.new_material(Material::Metal(Vec3::new(0.7, 0.6, 0.5), 0.0));
 
     resources.new_entity(Sphere::new(Vec3::new(0.0, -1000.0, 0.0), 1000.0, 0));
     resources.new_entity(Sphere::new(Vec3::new(0.0, 1.0, 0.0), 1.0, 1));
@@ -151,7 +151,7 @@ pub fn make_random_moving_scene(nx: u32, ny: u32, samples: u32) -> (Scene, Windo
             let center = Vec3::new(a as f32 + 0.9 * drand48(), 0.2, b as f32 + 0.9 * drand48());
             if (center - Vec3::new(4.0, 0.2, 0.0)).length() > 0.9 {
                 if choose_mat < 0.8 {
-                    let material = resources.new_material(MaterialEnum::Lambertian(Vec3::random() * Vec3::random()));
+                    let material = resources.new_material(Material::Lambertian(Vec3::random() * Vec3::random()));
                     resources.new_entity(MovingSphere::new(center,
                                                            center + Vec3::new(0.0, 0.5 * drand48(), 0.0),
                                                            0.0,
@@ -159,10 +159,10 @@ pub fn make_random_moving_scene(nx: u32, ny: u32, samples: u32) -> (Scene, Windo
                                                            0.2,
                                                            material as MaterialRef));
                 } else if choose_mat < 0.95 {
-                    let material = resources.new_material(MaterialEnum::Metal(0.5 * (1.0 + Vec3::random()), 0.5 * drand48()));
+                    let material = resources.new_material(Material::Metal(0.5 * (1.0 + Vec3::random()), 0.5 * drand48()));
                     resources.new_entity(Sphere::new(center, 0.2, material as MaterialRef));
                 } else {
-                    let material = resources.new_material(MaterialEnum::Dieletric(1.5));
+                    let material = resources.new_material(Material::Dieletric(1.5));
                     resources.new_entity(Sphere::new(center, 0.2, material as MaterialRef));
                 }
             }
@@ -178,10 +178,10 @@ pub fn make_random_moving_scene(nx: u32, ny: u32, samples: u32) -> (Scene, Windo
 #[allow(dead_code)]
 pub fn make_two_spheres_scene(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
     let mut resources = Resources::new();
-    resources.new_texture(TextureEnum::Constant(Vec3::new(0.2, 0.3, 0.1)));
-    resources.new_texture(TextureEnum::Constant(Vec3::uniform(0.9)));
-    resources.new_texture(TextureEnum::Checker(0, 1));
-    resources.new_material(MaterialEnum::LambertianTextured(0));
+    resources.new_texture(Texture::Constant(Vec3::new(0.2, 0.3, 0.1)));
+    resources.new_texture(Texture::Constant(Vec3::uniform(0.9)));
+    resources.new_texture(Texture::Checker(0, 1));
+    resources.new_material(Material::LambertianTextured(0));
 
     resources.new_entity(Sphere::new(Vec3::new(0.0, -10.0, 0.0), 10.0, 0));
     resources.new_entity(Sphere::new(Vec3::new(0.0, 10.0, 0.0), 10.0, 0));
@@ -197,8 +197,8 @@ pub fn make_two_perlin_spheres_scene(nx: u32, ny: u32, samples: u32) -> (Scene, 
     let mut resources = Resources::new();
 //    let tex = resources.new_texture(TextureEnum::Perlin);
 //    let tex = resources.new_texture(TextureEnum::ScaledPerlin(1.0));
-    let tex = resources.new_texture(TextureEnum::ScaledTurbulencePerlin(4.0));
-    let perlin_mat = resources.new_material(MaterialEnum::LambertianTextured(tex));
+    let tex = resources.new_texture(Texture::ScaledTurbulencePerlin(4.0));
+    let perlin_mat = resources.new_material(Material::LambertianTextured(tex));
 
     resources.new_entity(Sphere::new(Vec3::new(0.0, -1000.0, 0.0), 1000.0, perlin_mat));
     resources.new_entity(Sphere::new(Vec3::new(0.0, 2.0, 0.0), 2.0, perlin_mat));
@@ -211,8 +211,8 @@ pub fn make_two_perlin_spheres_scene(nx: u32, ny: u32, samples: u32) -> (Scene, 
 #[allow(dead_code)]
 pub fn make_earth_scene(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
     let mut resources = Resources::new();
-    let tex = resources.new_texture(TextureEnum::Image(::imagers::open("earthmap.jpg").unwrap().to_rgb()));
-    resources.new_material(MaterialEnum::LambertianTextured(tex));
+    let tex = resources.new_texture(Texture::Image(::imagers::open("earthmap.jpg").unwrap().to_rgb()));
+    resources.new_material(Material::LambertianTextured(tex));
     resources.new_entity(Sphere::new(Vec3::zero(), 2.0, 0));
 
     (
@@ -224,10 +224,10 @@ pub fn make_earth_scene(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
 #[allow(dead_code)]
 pub fn make_simple_light_scene(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
     let mut resources = Resources::new();
-    let perlin_t = resources.new_texture(TextureEnum::ScaledTurbulencePerlin(4.0));
-    let perlin = resources.new_material(MaterialEnum::LambertianTextured(perlin_t));
-    let light_t = resources.new_texture(TextureEnum::Constant(Vec3::uniform(4.0)));
-    let light = resources.new_material(MaterialEnum::DiffuseLight(light_t));
+    let perlin_t = resources.new_texture(Texture::ScaledTurbulencePerlin(4.0));
+    let perlin = resources.new_material(Material::LambertianTextured(perlin_t));
+    let light_t = resources.new_texture(Texture::Constant(Vec3::uniform(4.0)));
+    let light = resources.new_material(Material::DiffuseLight(light_t));
 
     resources.new_entity(Sphere::new(Vec3::new(0.0, -1000.0, 0.0), 1000.0, perlin));
     resources.new_entity(Sphere::new(Vec3::new(0.0, 2.0, 0.0), 2.0, perlin));
@@ -256,20 +256,18 @@ pub fn make_simple_light_scene(nx: u32, ny: u32, samples: u32) -> (Scene, Window
 #[allow(dead_code)]
 pub fn make_cornell_box(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
     let mut resources = Resources::new();
-    let red_t = resources.new_texture(TextureEnum::Constant(Vec3::new(0.65, 0.05, 0.05)));
-    let red = resources.new_material(MaterialEnum::LambertianTextured(red_t));
+    let red_t = resources.new_texture(Texture::Constant(Vec3::new(0.65, 0.05, 0.05)));
+    let red = resources.new_material(Material::LambertianTextured(red_t));
 
-    let green_t = resources.new_texture(TextureEnum::Constant(Vec3::new(0.12, 0.45, 0.15)));
-    let green = resources.new_material(MaterialEnum::LambertianTextured(green_t));
+    let green_t = resources.new_texture(Texture::Constant(Vec3::new(0.12, 0.45, 0.15)));
+    let green = resources.new_material(Material::LambertianTextured(green_t));
 
-    let white_t = resources.new_texture(TextureEnum::Constant(Vec3::uniform(0.73)));
-    let white = resources.new_material(MaterialEnum::LambertianTextured(white_t));
+    let white_t = resources.new_texture(Texture::Constant(Vec3::uniform(0.73)));
+    let white = resources.new_material(Material::LambertianTextured(white_t));
 
-    let light_t = resources.new_texture(TextureEnum::Constant(Vec3::uniform(7.0)));
-    let light = resources.new_material(MaterialEnum::DiffuseLight(light_t));
+    let light_t = resources.new_texture(Texture::Constant(Vec3::uniform(7.0)));
+    let light = resources.new_material(Material::DiffuseLight(light_t));
 
-
-    // TODO: Flip this, so that the type is in charge of pushing any required entities - Maybe not needed?
     resources.new_entity(Translate::new(RotateY::new(Cube::new(Vec3::zero(),
                                                                Vec3::uniform(165.0), white), -18.0),
                                         Vec3::new(130.0, 0.0, 65.0)));
@@ -306,22 +304,22 @@ pub fn make_cornell_box(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
 #[allow(dead_code)]
 pub fn make_cornell_smoke(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
     let mut resources = Resources::new();
-    let red_t = resources.new_texture(TextureEnum::Constant(Vec3::new(0.65, 0.05, 0.05)));
-    let red = resources.new_material(MaterialEnum::LambertianTextured(red_t));
+    let red_t = resources.new_texture(Texture::Constant(Vec3::new(0.65, 0.05, 0.05)));
+    let red = resources.new_material(Material::LambertianTextured(red_t));
 
-    let green_t = resources.new_texture(TextureEnum::Constant(Vec3::new(0.12, 0.45, 0.15)));
-    let green = resources.new_material(MaterialEnum::LambertianTextured(green_t));
+    let green_t = resources.new_texture(Texture::Constant(Vec3::new(0.12, 0.45, 0.15)));
+    let green = resources.new_material(Material::LambertianTextured(green_t));
 
-    let white_t = resources.new_texture(TextureEnum::Constant(Vec3::uniform(0.73)));
-    let white = resources.new_material(MaterialEnum::LambertianTextured(white_t));
+    let white_t = resources.new_texture(Texture::Constant(Vec3::uniform(0.73)));
+    let white = resources.new_material(Material::LambertianTextured(white_t));
 
-    let light_t = resources.new_texture(TextureEnum::Constant(Vec3::uniform(7.0)));
-    let light = resources.new_material(MaterialEnum::DiffuseLight(light_t));
+    let light_t = resources.new_texture(Texture::Constant(Vec3::uniform(7.0)));
+    let light = resources.new_material(Material::DiffuseLight(light_t));
 
-    let smoke_box_t_0 = resources.new_texture(TextureEnum::Constant(Vec3::uniform(1.0)));
-    let smoke_box_m_0 = resources.new_material(MaterialEnum::Isotropic(smoke_box_t_0));
-    let smoke_box_t_1 = resources.new_texture(TextureEnum::Constant(Vec3::uniform(0.0)));
-    let smoke_box_m_1 = resources.new_material(MaterialEnum::Isotropic(smoke_box_t_1));
+    let smoke_box_t_0 = resources.new_texture(Texture::Constant(Vec3::uniform(1.0)));
+    let smoke_box_m_0 = resources.new_material(Material::Isotropic(smoke_box_t_0));
+    let smoke_box_t_1 = resources.new_texture(Texture::Constant(Vec3::uniform(0.0)));
+    let smoke_box_m_1 = resources.new_material(Material::Isotropic(smoke_box_t_1));
 
 
     resources.new_entity(FlipNormals::new(YZRect::new(0.0, 555.0, 0.0, 555.0, 555.0, green))); // Left plane
@@ -371,28 +369,28 @@ pub fn make_cornell_smoke(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
 #[allow(dead_code)]
 pub fn make_final_scene(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
     let mut resources = Resources::new();
-    let tex = resources.new_texture(TextureEnum::Constant(Vec3::uniform(0.73)));
-    let white = resources.new_material(MaterialEnum::LambertianTextured(tex));
-    let tex = resources.new_texture(TextureEnum::Constant(Vec3::new(0.48, 0.83, 0.53)));
-    let ground = resources.new_material(MaterialEnum::LambertianTextured(tex));
+    let tex = resources.new_texture(Texture::Constant(Vec3::uniform(0.73)));
+    let white = resources.new_material(Material::LambertianTextured(tex));
+    let tex = resources.new_texture(Texture::Constant(Vec3::new(0.48, 0.83, 0.53)));
+    let ground = resources.new_material(Material::LambertianTextured(tex));
 
-    let tex = resources.new_texture(TextureEnum::Constant(Vec3::uniform(7.0)));
-    let light = resources.new_material(MaterialEnum::DiffuseLight(tex));
-    let tex = resources.new_texture(TextureEnum::Constant(Vec3::new(0.7, 0.3, 0.1)));
-    let brown = resources.new_material(MaterialEnum::LambertianTextured(tex));
+    let tex = resources.new_texture(Texture::Constant(Vec3::uniform(7.0)));
+    let light = resources.new_material(Material::DiffuseLight(tex));
+    let tex = resources.new_texture(Texture::Constant(Vec3::new(0.7, 0.3, 0.1)));
+    let brown = resources.new_material(Material::LambertianTextured(tex));
 
-    let glass = resources.new_material(MaterialEnum::Dieletric(1.5));
-    let metal = resources.new_material(MaterialEnum::Metal(Vec3::new(0.8, 0.8, 0.9), 10.0));
+    let glass = resources.new_material(Material::Dieletric(1.5));
+    let metal = resources.new_material(Material::Metal(Vec3::new(0.8, 0.8, 0.9), 10.0));
 
-    let tex = resources.new_texture(TextureEnum::Constant(Vec3::new(0.2, 0.4, 0.9)));
-    let blue = resources.new_material(MaterialEnum::Isotropic(tex));
-    let tex = resources.new_texture(TextureEnum::Constant(Vec3::uniform(1.0)));
-    let black = resources.new_material(MaterialEnum::Isotropic(tex));
+    let tex = resources.new_texture(Texture::Constant(Vec3::new(0.2, 0.4, 0.9)));
+    let blue = resources.new_material(Material::Isotropic(tex));
+    let tex = resources.new_texture(Texture::Constant(Vec3::uniform(1.0)));
+    let black = resources.new_material(Material::Isotropic(tex));
 
-    let tex = resources.new_texture(TextureEnum::Image(::imagers::open("earthmap.jpg").unwrap().to_rgb()));
-    let earthmap = resources.new_material(MaterialEnum::LambertianTextured(tex));
-    let tex = resources.new_texture(TextureEnum::ScaledTurbulencePerlin(0.1));
-    let perlin = resources.new_material(MaterialEnum::LambertianTextured(tex));
+    let tex = resources.new_texture(Texture::Image(::imagers::open("earthmap2.jpg").unwrap().to_rgb()));
+    let earthmap = resources.new_material(Material::LambertianTextured(tex));
+    let tex = resources.new_texture(Texture::ScaledTurbulencePerlin(0.1));
+    let perlin = resources.new_material(Material::LambertianTextured(tex));
 
     for i in 0..20 {
         for j in 0..20 {
@@ -417,7 +415,7 @@ pub fn make_final_scene(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
     resources.new_entity(boundary.clone());
     resources.new_entity(ConstantMedium::new(boundary, 0.2, blue));
 
-    let mut boundary = Sphere::new(Vec3::new(360.0, 150.0, 145.0), 5000.0, glass);
+    let boundary = Sphere::new(Vec3::new(360.0, 150.0, 145.0), 5000.0, glass);
     resources.new_entity(ConstantMedium::new(boundary, 0.0001, black));
 
     resources.new_entity(Sphere::new(Vec3::new(400.0, 200.0, 400.0), 100.0, earthmap));
@@ -441,7 +439,7 @@ pub fn make_final_scene(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
                 nx as u32,
                 ny as u32,
                 0.0,
-                1.0,
+                10.0,
             ),
         ),
     )

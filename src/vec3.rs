@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use random::drand48;
+use random::{drand48, drand48_2, drand48_3};
 
 use std::fmt;
 use std::num::ParseFloatError;
@@ -47,11 +47,13 @@ impl Vec3 {
     }
 
     pub fn random() -> Vec3 {
-        Vec3::new(drand48(), drand48(), drand48())
+        let random_values = drand48_3();
+        Vec3::new(random_values[0], random_values[1], random_values[2])
     }
 
     pub fn random_2d() -> Vec3 {
-        Vec3::new(drand48(), drand48(), 0.0)
+        let random_values = drand48_2();
+        Vec3::new(random_values[0], random_values[1], 0.0)
     }
 
     pub fn new(d0: f32, d1: f32, d2: f32) -> Vec3 {

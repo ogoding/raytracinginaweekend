@@ -1,6 +1,7 @@
 use camera::Camera;
-use hitable::HitableList;
+use hitable::Hitable;
 use material::Material;
+use texture::Texture;
 
 // TODO: These world and material collections should be more generic (a slice) to allow for array usage instead of always Vec
 // TODO: Should also make them use a series of typed arrays/vecs instead - e.g. Map<T, [T]>
@@ -39,12 +40,6 @@ impl Window {
 
 unsafe impl Send for Window {}
 unsafe impl Sync for Window {}
-
-
-use hitable::Hitable;
-use material::MaterialEnum;
-use texture::TextureEnum;
-use aabb::AABBVolume;
 
 pub type EntityRef = usize;
 pub type HitableRef = usize;
@@ -96,8 +91,8 @@ pub struct Resources {
     // TODO: Bench/try using an arena or slotmap
     // TODO: Bench/try using a map of vecs/arenas/etc where the key == data type - e.g. Map<Hitable<T>::id, Vec<Hitable<T>> map; map.get::<Hitable<T>>(id); or map.get(id); where id includes hitable type's id
     pub entities: Entities,
-    pub materials: Vec<MaterialEnum>,
-    pub textures: Vec<TextureEnum>
+    pub materials: Vec<Material>,
+    pub textures: Vec<Texture>
 }
 
 unsafe impl Send for Resources {}
@@ -116,13 +111,13 @@ impl Resources {
         self.entities.new_entity(hitable)
     }
 
-    pub fn new_material(&mut self, material: MaterialEnum) -> MaterialRef {
+    pub fn new_material(&mut self, material: Material) -> MaterialRef {
         // TODO: assert that textures exist
         self.materials.push(material);
         self.materials.len() - 1
     }
 
-    pub fn new_texture(&mut self, texture: TextureEnum) -> TextureRef {
+    pub fn new_texture(&mut self, texture: Texture) -> TextureRef {
         self.textures.push(texture);
         self.textures.len() - 1
     }
@@ -131,11 +126,11 @@ impl Resources {
         self.entities.get_hitable(id)
     }
 
-    pub fn get_material(&self, id: MaterialRef) -> &MaterialEnum {
+    pub fn get_material(&self, id: MaterialRef) -> &Material {
         &self.materials[id]
     }
 
-    pub fn get_texture(&self, id: TextureRef) -> &TextureEnum {
+    pub fn get_texture(&self, id: TextureRef) -> &Texture {
         &self.textures[id]
     }
 }

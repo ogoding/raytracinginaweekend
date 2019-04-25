@@ -1,5 +1,5 @@
 use aabb::AABBVolume;
-use hitable::{HitRecord, HitableList, Hitable};
+use hitable::{HitRecord, Hitable};
 use scene::{Entities, MaterialRef};
 use random::drand48;
 use ray::Ray;
@@ -21,14 +21,6 @@ impl<H: Hitable> ConstantMedium<H> {
             density,
             phase_function,
         }
-    }
-
-    pub fn new_boxed(
-        boundary: H,
-        density: f32,
-        phase_function: MaterialRef,
-    ) -> Box<ConstantMedium<H>> {
-        Box::new(ConstantMedium::new(boundary, density, phase_function))
     }
 }
 

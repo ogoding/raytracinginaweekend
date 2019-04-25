@@ -1,6 +1,6 @@
 use aabb::{surrounding_box, AABBVolume};
 use aarect::{XYRect, XZRect, YZRect};
-use hitable::{HitRecord, HitableList, Hitable};
+use hitable::{HitRecord, Hitable};
 use scene::{Entities, MaterialRef};
 use ray::Ray;
 use transform::FlipNormals;
@@ -54,11 +54,6 @@ impl Cube {
             left,
             right,
         }
-    }
-
-    #[allow(dead_code)]
-    pub fn new_boxed(pmin: Vec3, pmax: Vec3, mat: MaterialRef) -> Box<Cube> {
-        Box::new(Cube::new(pmin, pmax, mat))
     }
 }
 

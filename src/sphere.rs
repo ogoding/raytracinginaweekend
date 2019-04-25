@@ -1,5 +1,5 @@
 use aabb::{surrounding_box, AABBVolume};
-use hitable::{HitRecord, HitableList, Hitable};
+use hitable::{HitRecord, Hitable};
 use scene::Entities;
 use scene::MaterialRef;
 use ray::Ray;
@@ -27,10 +27,6 @@ impl Sphere {
             radius,
             material,
         }
-    }
-
-    pub fn new_boxed(center: Vec3, radius: f32, material: MaterialRef) -> Box<Sphere> {
-        Box::new(Sphere::new(center, radius, material))
     }
 
     #[inline(always)]
@@ -108,19 +104,6 @@ impl MovingSphere {
             time0: t0,
             time1: t1,
         }
-    }
-
-    pub fn new_boxed(
-        center0: Vec3,
-        center1: Vec3,
-        t0: f32,
-        t1: f32,
-        radius: f32,
-        material: MaterialRef,
-    ) -> Box<MovingSphere> {
-        Box::new(MovingSphere::new(
-            center0, center1, t0, t1, radius, material,
-        ))
     }
 
     #[inline(always)]

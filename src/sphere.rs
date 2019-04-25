@@ -1,6 +1,7 @@
 use aabb::{surrounding_box, AABBVolume};
 use hitable::{HitRecord, Hitable};
-use material::MaterialIndex;
+use scene::Entities;
+use scene::MaterialRef;
 use ray::Ray;
 use vec3::Vec3;
 
@@ -12,23 +13,20 @@ fn get_sphere_uv(p: &Vec3) -> (f32, f32) {
     (1.0 - (phi + PI) / (2.0 * PI), (theta + FRAC_PI_2) / PI)
 }
 
+#[derive(Debug, Clone)]
 pub struct Sphere {
     center: Vec3,
     radius: f32,
-    material: MaterialIndex,
+    material: MaterialRef,
 }
 
 impl Sphere {
-    pub fn new(center: Vec3, radius: f32, material: MaterialIndex) -> Sphere {
+    pub fn new(center: Vec3, radius: f32, material: MaterialRef) -> Sphere {
         Sphere {
             center,
             radius,
             material,
         }
-    }
-
-    pub fn new_boxed(center: Vec3, radius: f32, material: MaterialIndex) -> Box<Sphere> {
-        Box::new(Sphere::new(center, radius, material))
     }
 
     #[inline(always)]
@@ -45,7 +43,7 @@ impl Sphere {
 }
 
 impl Hitable for Sphere {
-    fn hit_ptr(&self, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
+    fn hit_ptr(&self, entities: &Entities, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
         let oc = ray.origin() - self.center;
         let ray_direction = ray.direction();
         let a = ray_direction.squared_length();
@@ -79,11 +77,12 @@ impl Hitable for Sphere {
     }
 }
 
+#[derive(Debug)]
 pub struct MovingSphere {
     center0: Vec3,
     center1: Vec3,
     radius: f32,
-    material: MaterialIndex,
+    material: MaterialRef,
     time0: f32,
     time1: f32,
 }
@@ -95,7 +94,7 @@ impl MovingSphere {
         t0: f32,
         t1: f32,
         radius: f32,
-        material: MaterialIndex,
+        material: MaterialRef,
     ) -> MovingSphere {
         MovingSphere {
             center0,
@@ -105,19 +104,6 @@ impl MovingSphere {
             time0: t0,
             time1: t1,
         }
-    }
-
-    pub fn new_boxed(
-        center0: Vec3,
-        center1: Vec3,
-        t0: f32,
-        t1: f32,
-        radius: f32,
-        material: MaterialIndex,
-    ) -> Box<MovingSphere> {
-        Box::new(MovingSphere::new(
-            center0, center1, t0, t1, radius, material,
-        ))
     }
 
     #[inline(always)]
@@ -140,7 +126,7 @@ impl MovingSphere {
 }
 
 impl Hitable for MovingSphere {
-    fn hit_ptr(&self, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
+    fn hit_ptr(&self, entities: &Entities, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
         let oc = ray.origin() - self.center(ray.time());
         let ray_direction = ray.direction();
         let a = ray_direction.squared_length();

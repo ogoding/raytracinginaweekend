@@ -1,19 +1,19 @@
 use aarect::{XYRect, XZRect, YZRect};
 use camera::Camera;
 use cube::Cube;
-use hitable::{Hitable, HitableList};
-use material::{Dieletric, DiffuseLight, Isotropic, Lambertian, LambertianTextured, Material, Metal, MaterialIndex, MaterialEnum};
-use random::drand48;
-use sphere::{MovingSphere, Sphere};
-use texture::{CheckerTexture, ConstantTexture, ImageTexture, PerlinTexture, ScaledPerlinTexture, ScaledTurbulencePerlinTexture, TextureEnum};
 use transform::{FlipNormals, RotateY, Translate};
 use vec3::Vec3;
-use volume::ConstantMedium;
 
 use scene::{Scene, Window};
-use scene::Resources;
+use scene::{Resources, MaterialRef};
+use material::Material;
+use texture::Texture;
+use sphere::{Sphere, MovingSphere};
+use volume::ConstantMedium;
+use random::drand48;
 
-pub fn load_scene(name: &str, width: u32, height: u32, samples: u32) -> Result<(Scene, Window), &str> {
+
+pub fn load_scene(name: &str, width: u32, height: u32, samples: u32) -> Result<(Scene, Window), String> {
     match name {
         "default_scene" => Ok(make_scene(width, height, samples)),
         "random_scene" => Ok(make_random_scene(width, height, samples)),
@@ -25,7 +25,7 @@ pub fn load_scene(name: &str, width: u32, height: u32, samples: u32) -> Result<(
         "cornell_box" => Ok(make_cornell_box(width, height, samples)),
         "cornell_smoke" => Ok(make_cornell_smoke(width, height, samples)),
         "final_scene" => Ok(make_final_scene(width, height, samples)),
-        _ => Err("Unknown scene!")
+        _ => Err("Unknown scene!".to_owned())
     }
 }
 
@@ -70,100 +70,80 @@ fn make_default_camera(nx: u32, ny: u32) -> Camera {
 }
 
 #[allow(dead_code)]
-//pub fn make_scene() -> HitableList<Sphere> {
 pub fn make_scene(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
-    let materials: Vec<Box<Material>> = vec![
-        Box::new(Lambertian::new(Vec3::new(0.1, 0.2, 0.5))),
-        Box::new(Lambertian::new(Vec3::new(0.8, 0.8, 0.0))),
-        Box::new(Metal::new(Vec3::new(0.8, 0.6, 0.2), 0.3)),
-        Box::new(Dieletric::new(1.5)),
-    ];
+    let mut resources = Resources::new();
+    resources.new_material(Material::Lambertian(Vec3::new(0.1, 0.2, 0.5)));
+    resources.new_material(Material::Lambertian(Vec3::new(0.8, 0.8, 0.0)));
+    resources.new_material(Material::Metal(Vec3::new(0.8, 0.6, 0.2), 0.3));
+    resources.new_material(Material::Dieletric(1.5));
 
-    let world = HitableList::new(vec![
-        Sphere::new_boxed(Vec3::new(0.0, 0.0, -1.0), 0.5, 0),
-        Sphere::new_boxed(Vec3::new(0.0, -100.5, -1.0), 100.0, 1),
-        Sphere::new_boxed(Vec3::new(1.0, 0.0, -1.0), 0.5, 2),
-        Sphere::new_boxed(Vec3::new(-1.0, 0.0, -1.0), 0.5, 3),
-        Sphere::new_boxed(Vec3::new(-1.0, 0.0, -1.0), -0.45, 3),
-    ]);
+    resources.new_entity(Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5, 0));
+    resources.new_entity(Sphere::new(Vec3::new(0.0, -100.5, -1.0), 100.0, 1));
+    resources.new_entity(Sphere::new(Vec3::new(1.0, 0.0, -1.0), 0.5, 2));
+    resources.new_entity(Sphere::new(Vec3::new(-1.0, 0.0, -1.0), 0.5, 3));
+    resources.new_entity(Sphere::new(Vec3::new(-1.0, 0.0, -1.0), -0.45, 3));
 
     (
-        Scene::new(world, materials),
+        Scene::new(resources),
         Window::new(nx, ny, samples, make_default_camera(nx, ny)),
     )
 }
 
 #[allow(dead_code)]
 pub fn make_random_scene(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
-    let mut materials: Vec<Box<Material>> = vec![
-        Box::new(LambertianTextured::new(CheckerTexture::new_solid(
-            Vec3::new(0.2, 0.3, 0.1),
-            Vec3::uniform(0.9),
-        ))),
-        Box::new(Dieletric::new(1.5)),
-        Box::new(Lambertian::new(Vec3::new(0.4, 0.2, 0.1))),
-        Box::new(Metal::new(Vec3::new(0.7, 0.6, 0.5), 0.0)),
-    ];
+    let mut resources = Resources::new();
+    resources.new_texture(Texture::Constant(Vec3::new(0.2, 0.3, 0.1)));
+    resources.new_texture(Texture::Constant(Vec3::uniform(0.9)));
+    let tex = resources.new_texture(Texture::Checker(0, 1));
+    resources.new_material(Material::LambertianTextured(tex));
+    resources.new_material(Material::Dieletric(1.5));
+    resources.new_material(Material::Lambertian(Vec3::new(0.4, 0.2, 0.1)));
+    resources.new_material(Material::Metal(Vec3::new(0.7, 0.6, 0.5), 0.0));
 
-    let mut spheres: Vec<Box<Hitable>> = vec![
-        Sphere::new_boxed(Vec3::new(0.0, -1000.0, 0.0), 1000.0, 0),
-        Sphere::new_boxed(Vec3::new(0.0, 1.0, 0.0), 1.0, 1),
-        Sphere::new_boxed(Vec3::new(-4.0, 1.0, 0.0), 1.0, 2),
-        Sphere::new_boxed(Vec3::new(4.0, 1.0, 0.0), 1.0, 3),
-    ];
+    resources.new_entity(Sphere::new(Vec3::new(0.0, -1000.0, 0.0), 1000.0, 0));
+    resources.new_entity(Sphere::new(Vec3::new(0.0, 1.0, 0.0), 1.0, 1));
+    resources.new_entity(Sphere::new(Vec3::new(-4.0, 1.0, 0.0), 1.0, 2));
+    resources.new_entity(Sphere::new(Vec3::new(4.0, 1.0, 0.0), 1.0, 3));
 
     for a in -11..11 {
         for b in -11..11 {
             let choose_mat = drand48();
             let center = Vec3::new(a as f32 + 0.9 * drand48(), 0.2, b as f32 + 0.9 * drand48());
             if (center - Vec3::new(4.0, 0.2, 0.0)).length() > 0.9 {
-                if choose_mat < 0.8 {
-                    materials.push(Box::new(Lambertian::new(Vec3::new(
-                        drand48() * drand48(),
-                        drand48() * drand48(),
-                        drand48() * drand48(),
-                    ))));
+                let material = if choose_mat < 0.8 {
+                    resources.new_material(Material::Lambertian(Vec3::random() * Vec3::random()))
                 } else if choose_mat < 0.95 {
-                    materials.push(Box::new(Metal::new(
-                        Vec3::new(
-                            0.5 * (1.0 + drand48()),
-                            0.5 * (1.0 + drand48()),
-                            0.5 * (1.0 + drand48()),
-                        ),
-                        0.5 * drand48(),
-                    )));
+                    resources.new_material(Material::Metal(0.5 * (1.0 + Vec3::random()), 0.5 * drand48()))
                 } else {
-                    materials.push(Box::new(Dieletric::new(1.5)));
-                }
-                spheres.push(Sphere::new_boxed(center, 0.2, materials.len() as MaterialIndex - 1));
+                    resources.new_material(Material::Dieletric(1.5))
+                };
+
+                resources.new_entity(Sphere::new(center, 0.2, material as MaterialRef));
             }
         }
     }
 
     (
-        Scene::new(HitableList::new(spheres), materials),
+        Scene::new(resources),
         Window::new(nx, ny, samples, make_default_camera(nx, ny)),
     )
 }
 
 #[allow(dead_code)]
 pub fn make_random_moving_scene(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
-    let mut materials: Vec<Box<Material>> = vec![
-        Box::new(LambertianTextured::new(CheckerTexture::new_solid(
-            Vec3::new(0.2, 0.3, 0.1),
-            Vec3::uniform(0.9),
-        ))),
-        Box::new(Dieletric::new(1.5)),
-        Box::new(Lambertian::new(Vec3::new(0.4, 0.2, 0.1))),
-        Box::new(Metal::new(Vec3::new(0.7, 0.6, 0.5), 0.0)),
-    ];
+    let mut resources = Resources::new();
+    resources.new_texture(Texture::Constant(Vec3::new(0.2, 0.3, 0.1)));
+    resources.new_texture(Texture::Constant(Vec3::uniform(0.9)));
+    let tex = resources.new_texture(Texture::Checker(0, 1));
+    resources.new_material(Material::LambertianTextured(tex));
+    resources.new_material(Material::Dieletric(1.5));
+    resources.new_material(Material::Lambertian(Vec3::new(0.4, 0.2, 0.1)));
+    resources.new_material(Material::Metal(Vec3::new(0.7, 0.6, 0.5), 0.0));
 
-    let mut spheres: Vec<Box<Hitable>> = vec![
-        Sphere::new_boxed(Vec3::new(0.0, -1000.0, 0.0), 1000.0, 0),
-        Sphere::new_boxed(Vec3::new(0.0, 1.0, 0.0), 1.0, 1),
-        Sphere::new_boxed(Vec3::new(-4.0, 1.0, 0.0), 1.0, 2),
-        Sphere::new_boxed(Vec3::new(4.0, 1.0, 0.0), 1.0, 3),
-    ];
+    resources.new_entity(Sphere::new(Vec3::new(0.0, -1000.0, 0.0), 1000.0, 0));
+    resources.new_entity(Sphere::new(Vec3::new(0.0, 1.0, 0.0), 1.0, 1));
+    resources.new_entity(Sphere::new(Vec3::new(-4.0, 1.0, 0.0), 1.0, 2));
+    resources.new_entity(Sphere::new(Vec3::new(4.0, 1.0, 0.0), 1.0, 3));
 
     for a in -11..11 {
         for b in -11..11 {
@@ -171,112 +151,91 @@ pub fn make_random_moving_scene(nx: u32, ny: u32, samples: u32) -> (Scene, Windo
             let center = Vec3::new(a as f32 + 0.9 * drand48(), 0.2, b as f32 + 0.9 * drand48());
             if (center - Vec3::new(4.0, 0.2, 0.0)).length() > 0.9 {
                 if choose_mat < 0.8 {
-                    materials.push(Box::new(Lambertian::new(Vec3::new(
-                        drand48() * drand48(),
-                        drand48() * drand48(),
-                        drand48() * drand48(),
-                    ))));
-                    spheres.push(MovingSphere::new_boxed(
-                        center,
-                        center + Vec3::new(0.0, 0.5 * drand48(), 0.0),
-                        0.0,
-                        1.0,
-                        0.2,
-                        materials.len() as MaterialIndex - 1,
-                    ));
+                    let material = resources.new_material(Material::Lambertian(Vec3::random() * Vec3::random()));
+                    resources.new_entity(MovingSphere::new(center,
+                                                           center + Vec3::new(0.0, 0.5 * drand48(), 0.0),
+                                                           0.0,
+                                                           1.0,
+                                                           0.2,
+                                                           material as MaterialRef));
                 } else if choose_mat < 0.95 {
-                    materials.push(Box::new(Metal::new(
-                        Vec3::new(
-                            0.5 * (1.0 + drand48()),
-                            0.5 * (1.0 + drand48()),
-                            0.5 * (1.0 + drand48()),
-                        ),
-                        0.5 * drand48(),
-                    )));
-                    spheres.push(Sphere::new_boxed(center, 0.2, materials.len() as MaterialIndex - 1));
+                    let material = resources.new_material(Material::Metal(0.5 * (1.0 + Vec3::random()), 0.5 * drand48()));
+                    resources.new_entity(Sphere::new(center, 0.2, material as MaterialRef));
                 } else {
-                    materials.push(Box::new(Dieletric::new(1.5)));
-                    spheres.push(Sphere::new_boxed(center, 0.2, materials.len() as MaterialIndex - 1));
+                    let material = resources.new_material(Material::Dieletric(1.5));
+                    resources.new_entity(Sphere::new(center, 0.2, material as MaterialRef));
                 }
             }
         }
     }
 
     (
-        Scene::new(HitableList::new(spheres), materials),
+        Scene::new(resources),
         Window::new(nx, ny, samples, make_default_camera(nx, ny)),
     )
 }
 
 #[allow(dead_code)]
 pub fn make_two_spheres_scene(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
-    let materials: Vec<Box<Material>> = vec![Box::new(LambertianTextured::new(
-        CheckerTexture::new_solid(Vec3::new(0.2, 0.3, 0.1), Vec3::uniform(0.9)),
-    ))];
+    let mut resources = Resources::new();
+    resources.new_texture(Texture::Constant(Vec3::new(0.2, 0.3, 0.1)));
+    resources.new_texture(Texture::Constant(Vec3::uniform(0.9)));
+    resources.new_texture(Texture::Checker(0, 1));
+    resources.new_material(Material::LambertianTextured(0));
 
-    let world = HitableList::new(vec![
-        Sphere::new_boxed(Vec3::new(0.0, -10.0, 0.0), 10.0, 0),
-        Sphere::new_boxed(Vec3::new(0.0, 10.0, 0.0), 10.0, 0),
-    ]);
+    resources.new_entity(Sphere::new(Vec3::new(0.0, -10.0, 0.0), 10.0, 0));
+    resources.new_entity(Sphere::new(Vec3::new(0.0, 10.0, 0.0), 10.0, 0));
 
     (
-        Scene::new(world, materials),
+        Scene::new(resources),
         Window::new(nx, ny, samples, make_default_camera(nx, ny)),
     )
 }
 
 #[allow(dead_code)]
 pub fn make_two_perlin_spheres_scene(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
-    let materials: Vec<Box<Material>> = vec![
-        Box::new(LambertianTextured::new(PerlinTexture {})),
-        Box::new(LambertianTextured::new(ScaledPerlinTexture::new(1.0))),
-        Box::new(LambertianTextured::new(ScaledTurbulencePerlinTexture::new(
-            4.0,
-        ))),
-    ];
+    let mut resources = Resources::new();
+//    let tex = resources.new_texture(TextureEnum::Perlin);
+//    let tex = resources.new_texture(TextureEnum::ScaledPerlin(1.0));
+    let tex = resources.new_texture(Texture::ScaledTurbulencePerlin(4.0));
+    let perlin_mat = resources.new_material(Material::LambertianTextured(tex));
 
-    let world = HitableList::new(vec![
-        Sphere::new_boxed(Vec3::new(0.0, -1000.0, 0.0), 1000.0, 2),
-        Sphere::new_boxed(Vec3::new(0.0, 2.0, 0.0), 2.0, 2),
-    ]);
-
+    resources.new_entity(Sphere::new(Vec3::new(0.0, -1000.0, 0.0), 1000.0, perlin_mat));
+    resources.new_entity(Sphere::new(Vec3::new(0.0, 2.0, 0.0), 2.0, perlin_mat));
     (
-        Scene::new(world, materials),
+        Scene::new(resources),
         Window::new(nx, ny, samples, make_default_camera(nx, ny)),
     )
 }
 
 #[allow(dead_code)]
 pub fn make_earth_scene(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
-    let materials: Vec<Box<Material>> = vec![Box::new(LambertianTextured::new(ImageTexture::new(
-        "earthmap.jpg",
-    )))];
-    let world = HitableList::new(vec![Sphere::new_boxed(Vec3::zero(), 2.0, 0)]);
+    let mut resources = Resources::new();
+    let tex = resources.new_texture(Texture::Image(::imagers::open("earthmap.jpg").unwrap().to_rgb()));
+    resources.new_material(Material::LambertianTextured(tex));
+    resources.new_entity(Sphere::new(Vec3::zero(), 2.0, 0));
 
     (
-        Scene::new(world, materials),
+        Scene::new(resources),
         Window::new(nx, ny, samples, make_default_camera(nx, ny)),
     )
 }
 
 #[allow(dead_code)]
 pub fn make_simple_light_scene(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
-    let materials: Vec<Box<Material>> = vec![
-        Box::new(LambertianTextured::new(ScaledTurbulencePerlinTexture::new(
-            4.0,
-        ))),
-        Box::new(DiffuseLight::new(ConstantTexture::new(Vec3::uniform(4.0)))),
-    ];
+    let mut resources = Resources::new();
+    let perlin_t = resources.new_texture(Texture::ScaledTurbulencePerlin(4.0));
+    let perlin = resources.new_material(Material::LambertianTextured(perlin_t));
+    let light_t = resources.new_texture(Texture::Constant(Vec3::uniform(4.0)));
+    let light = resources.new_material(Material::DiffuseLight(light_t));
 
-    let world = HitableList::new(vec![
-        Sphere::new_boxed(Vec3::new(0.0, -1000.0, 0.0), 1000.0, 0),
-        Sphere::new_boxed(Vec3::new(0.0, 2.0, 0.0), 2.0, 0),
-        Sphere::new_boxed(Vec3::new(0.0, 7.0, 0.0), 2.0, 1),
-        XYRect::new_boxed(3.0, 5.0, 1.0, 3.0, -2.0, 1),
-    ]);
+    resources.new_entity(Sphere::new(Vec3::new(0.0, -1000.0, 0.0), 1000.0, perlin));
+    resources.new_entity(Sphere::new(Vec3::new(0.0, 2.0, 0.0), 2.0, perlin));
+    resources.new_entity(Sphere::new(Vec3::new(0.0, 7.0, 0.0), 2.0, light));
+    resources.new_entity(XYRect::new(3.0, 5.0, 1.0, 3.0, -2.0, light));
 
     (
-        Scene::new(world, materials),
+        Scene::new(resources),
         Window::new(
             nx,
             ny,
@@ -296,55 +255,35 @@ pub fn make_simple_light_scene(nx: u32, ny: u32, samples: u32) -> (Scene, Window
 
 #[allow(dead_code)]
 pub fn make_cornell_box(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
-//    let mut resources = Resources::new();
-//    resources.new_texture(TextureEnum::Constant(Vec3::new(0.65, 0.05, 0.05)));
-//    resources.new_material(MaterialEnum::LambertianTextured(0));
-//    resources.new_texture(TextureEnum::Constant(Vec3::new(0.12, 0.45, 0.15)));
-//    resources.new_material(MaterialEnum::LambertianTextured(1));
-//    resources.new_texture(TextureEnum::Constant(Vec3::uniform(0.73)));
-//    resources.new_material(MaterialEnum::LambertianTextured(2));
-//    resources.new_texture(TextureEnum::Constant(Vec3::uniform(15.0)));
-//    resources.new_material(MaterialEnum::DiffuseLight(2));
+    let mut resources = Resources::new();
+    let red_t = resources.new_texture(Texture::Constant(Vec3::new(0.65, 0.05, 0.05)));
+    let red = resources.new_material(Material::LambertianTextured(red_t));
 
-    let materials: Vec<Box<Material>> = vec![
-        Box::new(LambertianTextured::new(ConstantTexture::new(Vec3::new(
-            0.65, 0.05, 0.05,
-        )))),
-        Box::new(LambertianTextured::new(ConstantTexture::new(Vec3::new(
-            0.12, 0.45, 0.15,
-        )))),
-        Box::new(LambertianTextured::new(ConstantTexture::new(
-            Vec3::uniform(0.73),
-        ))),
-        Box::new(DiffuseLight::new(ConstantTexture::new(Vec3::uniform(15.0)))),
-    ];
+    let green_t = resources.new_texture(Texture::Constant(Vec3::new(0.12, 0.45, 0.15)));
+    let green = resources.new_material(Material::LambertianTextured(green_t));
 
-    let cube1 = Translate::new_boxed(
-        RotateY::new(Cube::new(Vec3::zero(), Vec3::uniform(165.0), 2), -18.0),
-        Vec3::new(130.0, 0.0, 65.0),
-    );
-    let cube2 = Translate::new_boxed(
-        RotateY::new(
-            Cube::new(Vec3::zero(), Vec3::new(165.0, 330.0, 165.0), 2),
-            15.0,
-        ),
-        Vec3::new(265.0, 0.0, 295.0),
-    );
+    let white_t = resources.new_texture(Texture::Constant(Vec3::uniform(0.73)));
+    let white = resources.new_material(Material::LambertianTextured(white_t));
 
-    let world = HitableList::new(vec![
-        FlipNormals::new_boxed(YZRect::new(0.0, 555.0, 0.0, 555.0, 555.0, 1)), // Left plane
-        YZRect::new_boxed(0.0, 555.0, 0.0, 555.0, 0.0, 0),                     // Right plane
-        XZRect::new_boxed(213.0, 343.0, 227.0, 322.0, 554.0, 3),               // Top light
-        XZRect::new_boxed(0.0, 555.0, 0.0, 555.0, 0.0, 2),                     // Bottom plane
-        FlipNormals::new_boxed(XZRect::new(0.0, 555.0, 0.0, 555.0, 555.0, 2)), // Top plane
-        FlipNormals::new_boxed(XYRect::new(0.0, 555.0, 0.0, 555.0, 555.0, 2)), // Back plane
-        cube1,
-        cube2,
-    ]);
+    let light_t = resources.new_texture(Texture::Constant(Vec3::uniform(7.0)));
+    let light = resources.new_material(Material::DiffuseLight(light_t));
+
+    resources.new_entity(Translate::new(RotateY::new(Cube::new(Vec3::zero(),
+                                                               Vec3::uniform(165.0), white), -18.0),
+                                        Vec3::new(130.0, 0.0, 65.0)));
+    resources.new_entity(Translate::new(RotateY::new(Cube::new(Vec3::zero(),
+                                                               Vec3::new(165.0, 330.0, 165.0), white), 15.0, ),
+                                        Vec3::new(265.0, 0.0, 295.0)));
+
+    resources.new_entity(FlipNormals::new(YZRect::new(0.0, 555.0, 0.0, 555.0, 555.0, green))); // Left plane
+    resources.new_entity(YZRect::new(0.0, 555.0, 0.0, 555.0, 0.0, red));                     // Right plane
+    resources.new_entity(XZRect::new(113.0, 443.0, 127.0, 432.0, 554.0, light));               // Top light
+    resources.new_entity(XZRect::new(0.0, 555.0, 0.0, 555.0, 0.0, white));                     // Bottom plane
+    resources.new_entity(FlipNormals::new(XZRect::new(0.0, 555.0, 0.0, 555.0, 555.0, white))); // Top plane
+    resources.new_entity(FlipNormals::new(XYRect::new(0.0, 555.0, 0.0, 555.0, 555.0, white))); // Back plane
 
     (
-        Scene::new(world, materials),
-//        Scene::new(world, resources),
+        Scene::new(resources),
         Window::new(
             nx,
             ny,
@@ -364,20 +303,31 @@ pub fn make_cornell_box(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
 
 #[allow(dead_code)]
 pub fn make_cornell_smoke(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
-    let materials: Vec<Box<Material>> = vec![
-        Box::new(LambertianTextured::new(ConstantTexture::new(Vec3::new(
-            0.65, 0.05, 0.05,
-        )))),
-        Box::new(LambertianTextured::new(ConstantTexture::new(Vec3::new(
-            0.12, 0.45, 0.15,
-        )))),
-        Box::new(LambertianTextured::new(ConstantTexture::new(
-            Vec3::uniform(0.73),
-        ))),
-        Box::new(DiffuseLight::new(ConstantTexture::new(Vec3::uniform(7.0)))),
-        Box::new(Isotropic::new(ConstantTexture::new(Vec3::uniform(1.0)))),
-        Box::new(Isotropic::new(ConstantTexture::new(Vec3::uniform(0.0)))),
-    ];
+    let mut resources = Resources::new();
+    let red_t = resources.new_texture(Texture::Constant(Vec3::new(0.65, 0.05, 0.05)));
+    let red = resources.new_material(Material::LambertianTextured(red_t));
+
+    let green_t = resources.new_texture(Texture::Constant(Vec3::new(0.12, 0.45, 0.15)));
+    let green = resources.new_material(Material::LambertianTextured(green_t));
+
+    let white_t = resources.new_texture(Texture::Constant(Vec3::uniform(0.73)));
+    let white = resources.new_material(Material::LambertianTextured(white_t));
+
+    let light_t = resources.new_texture(Texture::Constant(Vec3::uniform(7.0)));
+    let light = resources.new_material(Material::DiffuseLight(light_t));
+
+    let smoke_box_t_0 = resources.new_texture(Texture::Constant(Vec3::uniform(1.0)));
+    let smoke_box_m_0 = resources.new_material(Material::Isotropic(smoke_box_t_0));
+    let smoke_box_t_1 = resources.new_texture(Texture::Constant(Vec3::uniform(0.0)));
+    let smoke_box_m_1 = resources.new_material(Material::Isotropic(smoke_box_t_1));
+
+
+    resources.new_entity(FlipNormals::new(YZRect::new(0.0, 555.0, 0.0, 555.0, 555.0, green))); // Left plane
+    resources.new_entity(YZRect::new(0.0, 555.0, 0.0, 555.0, 0.0, red));                     // Right plane
+    resources.new_entity(XZRect::new(113.0, 443.0, 127.0, 432.0, 554.0, light));               // Top light
+    resources.new_entity(XZRect::new(0.0, 555.0, 0.0, 555.0, 0.0, white));                     // Bottom plane
+    resources.new_entity(FlipNormals::new(XZRect::new(0.0, 555.0, 0.0, 555.0, 555.0, white))); // Top plane
+    resources.new_entity(FlipNormals::new(XYRect::new(0.0, 555.0, 0.0, 555.0, 555.0, white))); // Back plane
 
     let b1 = Translate::new(
         RotateY::new(
@@ -394,19 +344,11 @@ pub fn make_cornell_smoke(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
         Vec3::new(265.0, 0.0, 295.0),
     );
 
-    let world = HitableList::new(vec![
-        FlipNormals::new_boxed(YZRect::new(0.0, 555.0, 0.0, 555.0, 555.0, 1)), // Left plane
-        YZRect::new_boxed(0.0, 555.0, 0.0, 555.0, 0.0, 0),                     // Right plane
-        XZRect::new_boxed(113.0, 443.0, 127.0, 432.0, 554.0, 3),               // Top light
-        XZRect::new_boxed(0.0, 555.0, 0.0, 555.0, 0.0, 2),                     // Bottom plane
-        FlipNormals::new_boxed(XZRect::new(0.0, 555.0, 0.0, 555.0, 555.0, 2)), // Top plane
-        FlipNormals::new_boxed(XYRect::new(0.0, 555.0, 0.0, 555.0, 555.0, 2)), // Back plane
-        ConstantMedium::new_boxed(b1, 0.01, 4),
-        ConstantMedium::new_boxed(b2, 0.01, 5),
-    ]);
+    resources.new_entity(ConstantMedium::new(b1, 0.01, smoke_box_m_0));
+    resources.new_entity(ConstantMedium::new(b2, 0.01, smoke_box_m_1));
 
     (
-        Scene::new(world, materials),
+        Scene::new(resources),
         Window::new(
             nx,
             ny,
@@ -426,14 +368,66 @@ pub fn make_cornell_smoke(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
 
 #[allow(dead_code)]
 pub fn make_final_scene(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
-    let mut materials: Vec<Box<Material>> = vec![];
-    let mut hitables = vec![];
+    let mut resources = Resources::new();
+    let tex = resources.new_texture(Texture::Constant(Vec3::uniform(0.73)));
+    let white = resources.new_material(Material::LambertianTextured(tex));
+    let tex = resources.new_texture(Texture::Constant(Vec3::new(0.48, 0.83, 0.53)));
+    let ground = resources.new_material(Material::LambertianTextured(tex));
 
-//    let white = Box::new()
+    let tex = resources.new_texture(Texture::Constant(Vec3::uniform(7.0)));
+    let light = resources.new_material(Material::DiffuseLight(tex));
+    let tex = resources.new_texture(Texture::Constant(Vec3::new(0.7, 0.3, 0.1)));
+    let brown = resources.new_material(Material::LambertianTextured(tex));
+
+    let glass = resources.new_material(Material::Dieletric(1.5));
+    let metal = resources.new_material(Material::Metal(Vec3::new(0.8, 0.8, 0.9), 10.0));
+
+    let tex = resources.new_texture(Texture::Constant(Vec3::new(0.2, 0.4, 0.9)));
+    let blue = resources.new_material(Material::Isotropic(tex));
+    let tex = resources.new_texture(Texture::Constant(Vec3::uniform(1.0)));
+    let black = resources.new_material(Material::Isotropic(tex));
+
+    let tex = resources.new_texture(Texture::Image(::imagers::open("earthmap2.jpg").unwrap().to_rgb()));
+    let earthmap = resources.new_material(Material::LambertianTextured(tex));
+    let tex = resources.new_texture(Texture::ScaledTurbulencePerlin(0.1));
+    let perlin = resources.new_material(Material::LambertianTextured(tex));
+
+    for i in 0..20 {
+        for j in 0..20 {
+            let w = 100.0;
+            let x0 = -1000.0 + i as f32 * w;
+            let z0 = -1000.0 + j as f32 * w;
+            let y0 = 0.0;
+            resources.new_entity(Cube::new(Vec3::new(x0, y0, z0),
+                                           Vec3::new(x0 + w, 100.0 * drand48() + 0.01, z0 + w),
+                                           ground));
+        }
+    }
+
+    resources.new_entity(XZRect::new(123.0, 423.0, 147.0, 412.0, 554.0, light));
+
+    let center = Vec3::new(400.0, 400.0, 200.0);
+    resources.new_entity(MovingSphere::new(center, center + Vec3::new(30.0, 0.0, 0.0), 0.0, 1.0, 50.0, brown));
+    resources.new_entity(Sphere::new(Vec3::new(260.0, 150.0, 45.0), 50.0, glass));
+    resources.new_entity(Sphere::new(Vec3::new(0.0, 150.0, 145.0), 50.0, metal));
+
+    let boundary = Sphere::new(Vec3::new(360.0, 150.0, 145.0), 70.0, glass);
+    resources.new_entity(boundary.clone());
+    resources.new_entity(ConstantMedium::new(boundary, 0.2, blue));
+
+    let boundary = Sphere::new(Vec3::new(360.0, 150.0, 145.0), 5000.0, glass);
+    resources.new_entity(ConstantMedium::new(boundary, 0.0001, black));
+
+    resources.new_entity(Sphere::new(Vec3::new(400.0, 200.0, 400.0), 100.0, earthmap));
+    resources.new_entity(Sphere::new(Vec3::new(220.0, 280.0, 300.0), 80.0, perlin));
+
+    for _i in 0..1000 {
+        let particle = Sphere::new(Vec3::random() * 165.0, 10.0, white);
+        resources.new_entity(Translate::new(RotateY::new(particle, 15.0), Vec3::new(-100.0, 270.0, 395.0)));
+    }
 
     (
-        Scene::new(HitableList::new(hitables), materials),
-//        Scene::new(world, resources),
+        Scene::new(resources),
         Window::new(
             nx,
             ny,
@@ -445,7 +439,7 @@ pub fn make_final_scene(nx: u32, ny: u32, samples: u32) -> (Scene, Window) {
                 nx as u32,
                 ny as u32,
                 0.0,
-                1.0,
+                10.0,
             ),
         ),
     )

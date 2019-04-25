@@ -13,7 +13,7 @@ rayon = "1.0.3"
 image = "0.21.0"
 
 # simd-noise crate
-# cgmath="*"
+cgmath="*"
 
 
 # slotmap crate

@@ -1,11 +1,12 @@
 use aabb::{surrounding_box, AABBVolume};
 use aarect::{XYRect, XZRect, YZRect};
 use hitable::{HitRecord, Hitable};
-use material::MaterialIndex;
+use scene::{Entities, MaterialRef};
 use ray::Ray;
 use transform::FlipNormals;
 use vec3::Vec3;
 
+#[derive(Debug)]
 pub struct Cube {
     top: FlipNormals<XZRect>,
     bottom: XZRect,
@@ -16,7 +17,7 @@ pub struct Cube {
 }
 
 impl Cube {
-    pub fn new(pmin: Vec3, pmax: Vec3, mat: MaterialIndex) -> Cube {
+    pub fn new(pmin: Vec3, pmax: Vec3, mat: MaterialRef) -> Cube {
         let front = XYRect::new(pmin.x(), pmax.x(), pmin.y(), pmax.y(), pmax.z(), mat);
         let back = FlipNormals::new(XYRect::new(
             pmin.x(),
@@ -54,15 +55,10 @@ impl Cube {
             right,
         }
     }
-
-    #[allow(dead_code)]
-    pub fn new_boxed(pmin: Vec3, pmax: Vec3, mat: MaterialIndex) -> Box<Cube> {
-        Box::new(Cube::new(pmin, pmax, mat))
-    }
 }
 
 impl Hitable for Cube {
-    fn hit_ptr(&self, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
+    fn hit_ptr(&self, entities: &Entities, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
         let mut temp_rec = HitRecord::zero();
         let mut hit_anything = false;
         let mut closest_so_far = t_max;
@@ -70,38 +66,38 @@ impl Hitable for Cube {
         // TODO: Make a macro or fn to clean this up a bit
         if self
             .front
-            .hit_ptr(ray, t_min, closest_so_far, &mut temp_rec)
+            .hit_ptr(entities, ray, t_min, closest_so_far, &mut temp_rec)
         {
             hit_anything = true;
             closest_so_far = temp_rec.t;
             *hit_record = temp_rec;
         }
-        if self.back.hit_ptr(ray, t_min, closest_so_far, &mut temp_rec) {
+        if self.back.hit_ptr(entities, ray, t_min, closest_so_far, &mut temp_rec) {
             hit_anything = true;
             closest_so_far = temp_rec.t;
             *hit_record = temp_rec;
         }
-        if self.top.hit_ptr(ray, t_min, closest_so_far, &mut temp_rec) {
+        if self.top.hit_ptr(entities, ray, t_min, closest_so_far, &mut temp_rec) {
             hit_anything = true;
             closest_so_far = temp_rec.t;
             *hit_record = temp_rec;
         }
         if self
             .bottom
-            .hit_ptr(ray, t_min, closest_so_far, &mut temp_rec)
+            .hit_ptr(entities, ray, t_min, closest_so_far, &mut temp_rec)
         {
             hit_anything = true;
             closest_so_far = temp_rec.t;
             *hit_record = temp_rec;
         }
-        if self.left.hit_ptr(ray, t_min, closest_so_far, &mut temp_rec) {
+        if self.left.hit_ptr(entities, ray, t_min, closest_so_far, &mut temp_rec) {
             hit_anything = true;
             closest_so_far = temp_rec.t;
             *hit_record = temp_rec;
         }
         if self
             .right
-            .hit_ptr(ray, t_min, closest_so_far, &mut temp_rec)
+            .hit_ptr(entities, ray, t_min, closest_so_far, &mut temp_rec)
         {
             hit_anything = true;
             //            closest_so_far = temp_rec.t;

@@ -1,5 +1,6 @@
 use aabb::AABBVolume;
 use hitable::{HitRecord, Hitable};
+use scene::Entities;
 use ray::Ray;
 use vec3::Vec3;
 
@@ -7,6 +8,7 @@ use std::f32;
 
 // TODO: Add a wrapper type for storing a reference to some Primitive/Geometry in order to do proper instancing- e.g. Translate::new(GeometryRef(2), Vec3::uniform(5.0))
 
+#[derive(Debug)]
 pub struct FlipNormals<H> {
     ptr: H,
 }
@@ -15,15 +17,11 @@ impl<H: Hitable> FlipNormals<H> {
     pub fn new(ptr: H) -> FlipNormals<H> {
         FlipNormals { ptr }
     }
-
-    pub fn new_boxed(ptr: H) -> Box<FlipNormals<H>> {
-        Box::new(FlipNormals::new(ptr))
-    }
 }
 
 impl<H: Hitable> Hitable for FlipNormals<H> {
-    fn hit_ptr(&self, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
-        let hit = self.ptr.hit_ptr(ray, t_min, t_max, hit_record);
+    fn hit_ptr(&self, entities: &Entities, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
+        let hit = self.ptr.hit_ptr(entities, ray, t_min, t_max, hit_record);
         if hit {
             hit_record.normal = -hit_record.normal;
             //            hit_record.normal *= -1.0;
@@ -36,6 +34,7 @@ impl<H: Hitable> Hitable for FlipNormals<H> {
     }
 }
 
+#[derive(Debug)]
 pub struct Translate<T: Hitable> {
     ptr: T,
     offset: Vec3,
@@ -45,17 +44,13 @@ impl<T: Hitable> Translate<T> {
     pub fn new(ptr: T, offset: Vec3) -> Translate<T> {
         Translate { ptr, offset }
     }
-
-    pub fn new_boxed(ptr: T, offset: Vec3) -> Box<Translate<T>> {
-        Box::new(Translate::new(ptr, offset))
-    }
 }
 
 impl<T: Hitable> Hitable for Translate<T> {
-    fn hit_ptr(&self, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
+    fn hit_ptr(&self, entities: &Entities, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
         let moved_ray = Ray::new(ray.origin() - self.offset, ray.direction(), ray.time());
 
-        let hit = self.ptr.hit_ptr(&moved_ray, t_min, t_max, hit_record);
+        let hit = self.ptr.hit_ptr(entities, &moved_ray, t_min, t_max, hit_record);
         if hit {
             hit_record.p += self.offset;
         }
@@ -74,10 +69,12 @@ impl<T: Hitable> Hitable for Translate<T> {
     }
 }
 
+#[derive(Debug)]
 pub struct RotateY<T: Hitable> {
     ptr: T,
     sin_theta: f32,
     cos_theta: f32,
+    // Pre-calculate and store bbox as calculating on the fly is too expensive
     aabb_box: Option<AABBVolume>,
 }
 
@@ -120,16 +117,10 @@ impl<T: Hitable> RotateY<T> {
             aabb_box: Some(AABBVolume::new(min, max)),
         }
     }
-
-    #[allow(dead_code)]
-    pub fn new_boxed(ptr: T, angle: f32) -> Box<RotateY<T>> {
-        Box::new(RotateY::new(ptr, angle))
-    }
 }
 
-// TODO: Make this prettier?
 impl<T: Hitable> Hitable for RotateY<T> {
-    fn hit_ptr(&self, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
+    fn hit_ptr(&self, entities: &Entities, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
         let ray_origin = ray.origin();
         let ray_direction = ray.direction();
 
@@ -147,7 +138,7 @@ impl<T: Hitable> Hitable for RotateY<T> {
 
         let rotated_ray = Ray::new(origin, direction, ray.time());
 
-        if self.ptr.hit_ptr(&rotated_ray, t_min, t_max, hit_record) {
+        if self.ptr.hit_ptr(entities, &rotated_ray, t_min, t_max, hit_record) {
             let p = Vec3::new(
                 self.cos_theta * hit_record.p.x() + self.sin_theta * hit_record.p.z(),
                 hit_record.p.y(),

@@ -6,16 +6,23 @@ use std::iter::once;
 pub type RGB = Rgb<u8>;
 
 #[inline(always)]
-fn scale_f32(float: f32, scale: f32) -> u8 {
-    (scale * float) as u8
+fn scale_f32_to_u8(float: f32) -> u8 {
+    // TODO: Ask Peter Shirley whether there is a better method of doing this (and that the book doesn't cover it)
+
+    // TODO: Come up with a better method of scaling the values. Needs a method with support for a higher dynamic range
+    if float >= 1.0 {
+        255
+    } else {
+        (float * 255.99) as u8
+    }
 }
 
 pub fn new_rgb(red: f32, green: f32, blue: f32) -> RGB {
     Rgb {
         data: [
-            scale_f32(255.99, red),
-            scale_f32(255.99, green),
-            scale_f32(255.99, blue)
+            scale_f32_to_u8(red),
+            scale_f32_to_u8(green),
+            scale_f32_to_u8(blue)
         ]
     }
 }

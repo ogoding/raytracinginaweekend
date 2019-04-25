@@ -43,9 +43,12 @@ fn permute<T: Copy>(values: &mut [T; 256]) {
 
 fn perlin_generate_perm() -> [i32; 256] {
     let mut vals = [0; 256];
-    for i in 0..256 as usize {
-        vals[i] = i as i32;
+    for (i, value) in vals.iter_mut().enumerate().take(256 as usize) {
+        *value = i as i32;
     }
+//    for i in 0..256 as usize {
+//        vals[i] = i as i32;
+//    }
     vals
 }
 

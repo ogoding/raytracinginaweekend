@@ -1,26 +1,17 @@
 use camera::Camera;
-use hitable::HitableList;
+use hitable::Hitable;
 use material::Material;
-
-// TODO: Come up with a struct for "owning" both entity list/arena and the BVH/acceleration structure
-// TODO: Find out whether the crates.io arenas contain sync/send
+use texture::Texture;
 
 // TODO: These world and material collections should be more generic (a slice) to allow for array usage instead of always Vec
 // TODO: Should also make them use a series of typed arrays/vecs instead - e.g. Map<T, [T]>
 pub struct Scene {
-    pub world: HitableList,
-    pub materials: Vec<Box<Material>>,
-//    pub resources: Resources
-    // TODO: Make 3 collections, entities/hitables, materials, textures - use arenas(?) and work out a more efficient way to access (e.g. list of typed lists)
+    pub resources: Resources
 }
 
 impl Scene {
-    // TODO: Change the fn signature(s) to take in a Vec<Box<Hitable>> and use these functions to determine the hitable container
-//    pub fn new(world: HitableList, resources: Resources) -> Scene {
-//        Scene { world, resources }
-//    }
-    pub fn new(world: HitableList, materials: Vec<Box<dyn Material>>) -> Scene {
-        Scene { world, materials }
+    pub fn new(resources: Resources) -> Scene {
+        Scene { resources }
     }
 }
 
@@ -50,22 +41,58 @@ impl Window {
 unsafe impl Send for Window {}
 unsafe impl Sync for Window {}
 
+pub type EntityRef = usize;
+pub type HitableRef = usize;
+pub type MaterialRef = usize;
+pub type TextureRef = usize;
 
-//use hitable::Hitable;
-use material::MaterialEnum;
-use texture::TextureEnum;
+#[derive(Debug)]
+pub struct Entity {
+    pub hitable_id: HitableRef,
+    ptr: Box<Hitable>
+}
 
-//type HitableRef = usize;
-type MaterialRef = usize;
-type TextureRef = usize;
+#[derive(Debug)]
+pub struct Entities {
+    pub entities: Vec<Entity>,
+}
+
+impl Entities {
+    pub fn new() -> Entities {
+        Entities {
+            entities: vec![]
+        }
+    }
+
+    pub fn new_entity<T: 'static + Hitable>(&mut self, hitable: T) -> HitableRef {
+        let id = self.entities.len();
+        self.entities.push(Entity { hitable_id: id, ptr: Box::new(hitable) });
+        id
+    }
+
+    pub fn get_entity(&self, id: EntityRef) -> &Entity {
+        &self.entities[id]
+    }
+
+    pub fn get_hitable(&self, id: HitableRef) -> &Box<Hitable> {
+        let entity = self.entities.iter()
+            .find(|&entity| entity.hitable_id == id)
+            .unwrap();
+        &entity.ptr
+    }
+
+    pub fn len(&self) -> usize {
+        self.entities.len()
+    }
+}
 
 #[derive(Debug)]
 pub struct Resources {
     // TODO: Bench/try using an arena or slotmap
     // TODO: Bench/try using a map of vecs/arenas/etc where the key == data type - e.g. Map<Hitable<T>::id, Vec<Hitable<T>> map; map.get::<Hitable<T>>(id); or map.get(id); where id includes hitable type's id
-//    pub entities: Vec<Box<Hitable>>,
-    pub materials: Vec<MaterialEnum>,
-    pub textures: Vec<TextureEnum>
+    pub entities: Entities,
+    pub materials: Vec<Material>,
+    pub textures: Vec<Texture>
 }
 
 unsafe impl Send for Resources {}
@@ -74,38 +101,36 @@ unsafe impl Sync for Resources {}
 impl Resources {
     pub fn new() -> Resources {
         Resources {
+            entities: Entities::new(),
             materials: vec![],
             textures: vec![]
         }
     }
-//    pub fn new_entity(&mut self, entity: Box<Hitable>) -> HitableRef {
-//        // TODO: assert that material exists and relevant textures?
-//        self.entities.push(entity);
-//        self.entities.len() - 1
-//    }
 
-    pub fn new_material(&mut self, material: MaterialEnum) -> MaterialRef {
+    pub fn new_entity<T: 'static + Hitable>(&mut self, hitable: T) -> HitableRef {
+        self.entities.new_entity(hitable)
+    }
+
+    pub fn new_material(&mut self, material: Material) -> MaterialRef {
         // TODO: assert that textures exist
         self.materials.push(material);
         self.materials.len() - 1
     }
 
-    pub fn new_texture(&mut self, texture: TextureEnum) -> TextureRef {
+    pub fn new_texture(&mut self, texture: Texture) -> TextureRef {
         self.textures.push(texture);
         self.textures.len() - 1
     }
 
-//    pub fn get_entity(&self, id: HitableRef) -> &Hitable {
-//        &self.entities[id]
-//    }
+    pub fn get_entity(&self, id: HitableRef) -> &Box<Hitable> {
+        self.entities.get_hitable(id)
+    }
 
-    pub fn get_material(&self, id: MaterialRef) -> &MaterialEnum {
+    pub fn get_material(&self, id: MaterialRef) -> &Material {
         &self.materials[id]
     }
 
-    pub fn get_texture(&self, id: TextureRef) -> &TextureEnum {
+    pub fn get_texture(&self, id: TextureRef) -> &Texture {
         &self.textures[id]
     }
-
-    // TODO: Implement an exists fn? or just make the get return Option<&T>
 }

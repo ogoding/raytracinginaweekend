@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use random::{drand48, drand48_2, drand48_3};
+use random::{drand48_2, drand48_3};
 
 use std::fmt;
 use std::num::ParseFloatError;

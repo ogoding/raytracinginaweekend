@@ -8,12 +8,12 @@ use vec3::Vec3;
 
 #[derive(Debug)]
 pub struct Cube {
-    top: FlipNormals<XZRect>,
-    bottom: XZRect,
     front: XYRect,
     back: FlipNormals<XYRect>,
-    left: FlipNormals<YZRect>,
-    right: YZRect,
+    top: XZRect,
+    bottom: FlipNormals<XZRect>,
+    left: YZRect,
+    right: FlipNormals<YZRect>,
 }
 
 impl Cube {
@@ -27,8 +27,8 @@ impl Cube {
             pmin.z(),
             mat,
         ));
-        let bottom = XZRect::new(pmin.x(), pmax.x(), pmin.z(), pmax.z(), pmax.y(), mat);
-        let top = FlipNormals::new(XZRect::new(
+        let top = XZRect::new(pmin.x(), pmax.x(), pmin.z(), pmax.z(), pmax.y(), mat);
+        let bottom = FlipNormals::new(XZRect::new(
             pmin.x(),
             pmax.x(),
             pmin.z(),
@@ -36,8 +36,8 @@ impl Cube {
             pmin.y(),
             mat,
         ));
-        let right = YZRect::new(pmin.y(), pmax.y(), pmin.z(), pmax.z(), pmax.x(), mat);
-        let left = FlipNormals::new(YZRect::new(
+        let left = YZRect::new(pmin.y(), pmax.y(), pmin.z(), pmax.z(), pmax.x(), mat);
+        let right = FlipNormals::new(YZRect::new(
             pmin.y(),
             pmax.y(),
             pmin.z(),
@@ -47,10 +47,10 @@ impl Cube {
         ));
 
         Cube {
-            top,
-            bottom,
             front,
             back,
+            top,
+            bottom,
             left,
             right,
         }
@@ -108,12 +108,12 @@ impl Hitable for Cube {
     }
 
     fn bounding_box(&self, t_min: f32, t_max: f32) -> Option<AABBVolume> {
-        let mut bbox = self.top.bounding_box(t_min, t_max).unwrap();
+        let mut bbox = self.front.bounding_box(t_min, t_max).unwrap();
+        bbox = surrounding_box(bbox, self.back.bounding_box(t_min, t_max).unwrap());
+        bbox = surrounding_box(bbox, self.top.bounding_box(t_min, t_max).unwrap());
         bbox = surrounding_box(bbox, self.bottom.bounding_box(t_min, t_max).unwrap());
         bbox = surrounding_box(bbox, self.left.bounding_box(t_min, t_max).unwrap());
         bbox = surrounding_box(bbox, self.right.bounding_box(t_min, t_max).unwrap());
-        bbox = surrounding_box(bbox, self.front.bounding_box(t_min, t_max).unwrap());
-        bbox = surrounding_box(bbox, self.back.bounding_box(t_min, t_max).unwrap());
         Some(bbox)
     }
 }

@@ -74,11 +74,11 @@ impl Entities {
         &self.entities[id]
     }
 
-    pub fn get_hitable(&self, id: HitableRef) -> &Box<Hitable> {
+    pub fn get_hitable(&self, id: HitableRef) -> &dyn Hitable {
         let entity = self.entities.iter()
             .find(|&entity| entity.hitable_id == id)
             .unwrap();
-        &entity.ptr
+        &*entity.ptr
     }
 
     pub fn len(&self) -> usize {
@@ -122,7 +122,7 @@ impl Resources {
         self.textures.len() - 1
     }
 
-    pub fn get_entity(&self, id: HitableRef) -> &Box<Hitable> {
+    pub fn get_entity(&self, id: HitableRef) -> &dyn Hitable {
         self.entities.get_hitable(id)
     }
 

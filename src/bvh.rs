@@ -3,61 +3,53 @@
 // TODO: Try using Z-Order curves to sort instead of random axis
 
 use aabb::{surrounding_box, AABBVolume};
-use hitable::{HitRecord, Hitable};
+use hitable::HitRecord;
 use random::drand48;
 use ray::Ray;
 
 use std::cmp::Ordering;
-use std::u32;
 use std::usize;
-use scene::Entities;
+use scene::{Entities, HitableRef};
+use vec3::Vec3;
 
-type BvhNodeIndex = u32;
-const GEOMETRY_INDEX_SENTINEL: BvhNodeIndex = u32::MAX;
+type BvhNodeIndex = usize;
+// TODO: Get rid of this somehow
+const GEOMETRY_INDEX_SENTINEL: BvhNodeIndex = usize::MAX;
 
 // TODO: Make an arena based tree that stores the node's index + child indexes - makes nodes bigger but can be more easily created and ordered
 // Read this: https://rcoh.me/posts/cache-oblivious-datastructures/
 
-//enum NodeRef {
-//    Geometry(HitableRef),
-//    Node(BvhNodeIndex),
-//    None
-//}
-//
-//impl NodeRef {
-//    fn is_geom(&self) -> bool {
-//        match self {
-//            NodeRef::Geometry(_) => true,
-//            _ => false
-//        }
-//    }
-//
-//    fn is_sentinel(&self) -> bool {
-//        match self {
-//            NodeRef::None => true,
-//            _ => false
-//        }
-//    }
-//}
-
-#[derive(Debug, Clone, Copy)]
-struct BvhNodeRef {
-    // TODO: Use an enum to indicate if it's a geometry index or a node index
-    index: BvhNodeIndex,
-    // Start with this and then make do something smart like a geometry ref counter and check if == to number of references or something and always put geometry references on the left
-    is_geometry: bool,
+pub trait Accelerator {
+    fn hit(&self, entities: &Entities, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool;
 }
 
-impl BvhNodeRef {
-    fn new() -> BvhNodeRef {
-        BvhNodeRef {
-            index: GEOMETRY_INDEX_SENTINEL,
-            is_geometry: false
+#[derive(Debug, Clone, Copy)]
+enum NodeRef {
+    Geometry(HitableRef),
+    Aggregate(BvhNodeIndex),
+    None
+}
+
+impl NodeRef {
+    fn is_geom(&self) -> bool {
+        match self {
+            NodeRef::Geometry(_) => true,
+            _ => false
         }
     }
 
-    fn is_sentinel(&self) -> bool {
-        self.index == GEOMETRY_INDEX_SENTINEL
+    fn is_aggregate(&self) -> bool {
+        match self {
+            NodeRef::Aggregate(_) => true,
+            _ => false
+        }
+    }
+
+    fn is_none(&self) -> bool {
+        match self {
+            NodeRef::None => true,
+            _ => false
+        }
     }
 }
 
@@ -65,22 +57,19 @@ impl BvhNodeRef {
 struct CompactBvhNode {
     // TODO: Try giving this an id so that the Vec<CompactBvhNode> can be sorted as needed
     bbox: AABBVolume,
-    left: BvhNodeRef,
-    right: BvhNodeRef
+    left: NodeRef,
+    right: NodeRef
 }
 
 impl CompactBvhNode {
-    fn set_ref(node_ref: &mut BvhNodeRef, hitables: &mut [(usize, AABBVolume)], nodes: &mut Vec<CompactBvhNode>, t_min: f32, t_max: f32) -> AABBVolume {
-        // TODO: handle/panic if hitables is empty
-        if hitables.len() == 1 {
-            node_ref.index = hitables[0].0 as BvhNodeIndex;
-            node_ref.is_geometry = true;
-            hitables[0].1
+    fn create_ref(hitables: &mut [(usize, AABBVolume)], nodes: &mut Vec<CompactBvhNode>, t_min: f32, t_max: f32) -> (NodeRef, AABBVolume) {
+        if hitables.is_empty() {
+            (NodeRef::None, AABBVolume::zero())
+        } else if hitables.len() == 1 {
+            (NodeRef::Geometry(hitables[0].0 as HitableRef), hitables[0].1)
         } else {
             let index = CompactBvhNode::create_node(hitables, nodes, t_min, t_max);
-            node_ref.index = index;
-            node_ref.is_geometry = false;
-            nodes[index as usize].bbox
+            (NodeRef::Aggregate(index), nodes[index as usize].bbox)
         }
     }
 
@@ -91,15 +80,21 @@ impl CompactBvhNode {
         t_max: f32,
     ) -> BvhNodeIndex {
         let current_index = nodes.len() as BvhNodeIndex;
-        let mut hitables = hitables;
+        let hitables = hitables;
 
         // sort data
-        sort_entities(&mut hitables);
+        let axis = drand48() as u8 * 3;
+//        let axis = (drand48() * 3.0) as u8;
+        match axis {
+            0 => hitables.sort_by(arena_bbox_x_compare),
+            1 => hitables.sort_by(arena_bbox_y_compare),
+            _ => hitables.sort_by(arena_bbox_z_compare),
+        };
 
         nodes.push(CompactBvhNode {
             bbox: AABBVolume::zero(),
-            left: BvhNodeRef::new(),
-            right: BvhNodeRef::new(),
+            left: NodeRef::None,
+            right: NodeRef::None,
         });
 
         // TODO: Think up a less horrible way to do the correct rounding
@@ -107,18 +102,19 @@ impl CompactBvhNode {
 //        let pivot_idx = hitables.len()/ 2;
         let (left_hitables, right_hitables) = hitables.split_at_mut(pivot_idx);
 
-        let mut left_ref = BvhNodeRef::new();
-        let mut node_bbox = CompactBvhNode::set_ref(&mut left_ref, left_hitables, nodes, t_min, t_max);
+        let (left_ref, left_bbox) = CompactBvhNode::create_ref(left_hitables, nodes, t_min, t_max);
+        let (right_ref, right_bbox) = CompactBvhNode::create_ref(right_hitables, nodes, t_min, t_max);
 
-        let mut right_ref = BvhNodeRef::new();
-        if !right_hitables.is_empty() {
-            let box_right = CompactBvhNode::set_ref(&mut right_ref, right_hitables, nodes, t_min, t_max);
-            node_bbox = surrounding_box(node_bbox, box_right);
-        }
-        let node = &mut nodes[current_index as usize];
+        let node: &mut CompactBvhNode = &mut nodes[current_index as usize];
         node.left = left_ref;
         node.right = right_ref;
-        node.bbox = node_bbox;
+        // Must check whether right is valid otherwise it will attempt to make a box from 0, 0, 0 to
+        // left_box instead of just around left_box. Although this generally shouldn't be a problem
+        node.bbox = if right_ref.is_none() {
+            left_bbox
+        } else {
+            surrounding_box(left_bbox, right_bbox)
+        };
 
         current_index
     }
@@ -198,7 +194,6 @@ pub struct CompactBvh {
 
 impl CompactBvh {
     pub fn new(entities: &Entities, t_min: f32, t_max: f32) -> CompactBvh {
-        use scene::HitableRef;
         let mut nodes = Vec::with_capacity(entities.len() * 2);
 
         // FIXME: Instead of effectively making a copy of the hitables list, sort the original Vec<Entity> (for mem/cache access/locality reasons)
@@ -221,14 +216,19 @@ impl CompactBvh {
         CompactBvh { nodes }
     }
 
-    fn hit_ref(&self, node_ref: BvhNodeRef, entities: &Entities, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
-        // TODO: Panic if the node_ref is a sentinel and not either aggregate or geometry?
-        if node_ref.is_geometry {
-            entities.get_hitable(node_ref.index as usize).hit_ptr(entities, ray, t_min, t_max, hit_record)
-        } else {
-            // Continue searching recursively
-            self.hit_internal_ptr(node_ref.index, entities, ray, t_min, t_max, hit_record)
+    fn hit_ref(&self, node_ref: &NodeRef, entities: &Entities, ray: &Ray, inv_ray_dir: &Vec3, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
+        match node_ref {
+            NodeRef::Geometry(index) => entities.get_hitable(*index).hit_ptr(entities, ray, t_min, t_max, hit_record),
+            NodeRef::Aggregate(index) => self.hit_internal_ptr(*index, entities, ray, inv_ray_dir, t_min, t_max, hit_record),
+            NodeRef::None => unreachable!("Shouldn't be possible since the tree structure should prevent these")
         }
+        // TODO: Panic if the node_ref is a sentinel and not either aggregate or geometry?
+//        if node_ref.is_geometry {
+//            entities.get_hitable(node_ref.index as usize).hit_ptr(entities, ray, t_min, t_max, hit_record)
+//        } else {
+//            // Continue searching recursively
+//            self.hit_internal_ptr(node_ref.index, entities, ray, t_min, t_max, hit_record)
+//        }
     }
 
     fn hit_internal_ptr(
@@ -236,31 +236,58 @@ impl CompactBvh {
         node_idx: BvhNodeIndex,
         entities: &Entities,
         ray: &Ray,
+        inv_ray_dir: &Vec3,
         t_min: f32,
         t_max: f32,
         hit_record: &mut HitRecord,
     ) -> bool {
         let node = &self.nodes[node_idx as usize];
 
-        if node.bbox.hit(ray, t_min, t_max) {
-            // FIXME: Various Bvh node/tree hits still seem to be around half the runtime of Bvh tests. Try and work out why
-            // FIXME: Does not seem to work correctly. e.g. shadow is missing on sphere in simple_light scene
-            if self.hit_ref(node.left, entities, ray, t_min, t_max, hit_record) {
-                self.hit_ref(node.right, entities, ray, t_min, t_max, hit_record);
+        // FIXME: Bug is somewhere in this logic. Old commented out version works correctly, however reduced version does not
+        if node.bbox.hit(ray._origin, *inv_ray_dir, t_min, t_max) {
+            let mut left_rec = HitRecord::zero();
+            let mut right_rec = HitRecord::zero();
+            let hit_left = self.hit_ref(&node.left, entities, ray, inv_ray_dir, t_min, t_max, &mut left_rec);
+            let hit_right = self.hit_ref(&node.right, entities, ray, inv_ray_dir, t_min, t_max, &mut right_rec);
 
+            if hit_left && hit_right {
+                if left_rec.t < right_rec.t {
+                    *hit_record = left_rec;
+                } else {
+                    *hit_record = right_rec;
+                }
                 return true;
-            } else {
-                return self.hit_ref(node.right, entities, ray, t_min, t_max, hit_record);
+            } else if hit_left {
+                *hit_record = left_rec;
+                return true;
+            } else if hit_right {
+                *hit_record = right_rec;
+                return true;
             }
+
+            // FIXME: Various Bvh node/tree hits still seem to be around half the runtime of Bvh tests. Try and work out why
+
+            // FIXME: There is something broken suspect about this code/approach (might be in hit_ref())
+            // FIXME: Old version worked as there was an initial check whether it was a geometry node (and could only hold one geometry index)
+//            if self.hit_ref(&node.left, entities, ray, t_min, t_max, hit_record) {
+//                self.hit_ref(&node.right, entities, ray, t_min, t_max, hit_record);
+//
+//                return true;
+//            } else {
+//                return self.hit_ref(&node.right, entities, ray, t_min, t_max, hit_record);
+//            }
         }
 
         false
     }
+}
 
-    pub fn hit(&self, entities: &Entities, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
-        self.hit_internal_ptr(0, entities, ray, t_min, t_max, hit_record)
+impl Accelerator for CompactBvh {
+    fn hit(&self, entities: &Entities, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
+        self.hit_internal_ptr(0, entities, ray, &ray.inverse_direction(), t_min, t_max, hit_record)
     }
 }
+
 
 
 #[derive(Debug)]
@@ -302,7 +329,13 @@ impl BvhNode {
         let current_index = nodes.len() as BvhNodeIndex;
 
         // sort data
-        sort_entities(&mut hitables[low_idx as usize..high_idx as usize]);
+        let axis = drand48() as u8 * 3;
+//        let axis = (drand48() * 3.0) as u8;
+        match axis {
+            0 => hitables.sort_by(arena_bbox_x_compare),
+            1 => hitables.sort_by(arena_bbox_y_compare),
+            _ => hitables.sort_by(arena_bbox_z_compare),
+        };
 
         nodes.push(BvhNode {
             bbox: AABBVolume::zero(),
@@ -317,7 +350,7 @@ impl BvhNode {
         let box_left = nodes[left_node_index as usize].bounding_box();
         let box_right = nodes[right_node_index as usize].bounding_box();
 
-        let node = &mut nodes[current_index as usize];
+        let node: &mut BvhNode = &mut nodes[current_index as usize];
         node.bbox = surrounding_box(box_left, box_right);
         node.left = left_node_index;
         node.right = right_node_index;
@@ -329,14 +362,12 @@ impl BvhNode {
         data_index: BvhNodeIndex,
         hitables: &mut [(usize, AABBVolume)],
         nodes: &mut Vec<BvhNode>,
-        t_min: f32,
-        t_max: f32,
     ) -> BvhNodeIndex {
         let current_index = nodes.len() as BvhNodeIndex;
 
         nodes.push(BvhNode {
             bbox: hitables[data_index as usize].1,
-            left: hitables[data_index as usize].0 as u32,
+            left: hitables[data_index as usize].0,
             right: GEOMETRY_INDEX_SENTINEL,
         });
 
@@ -351,9 +382,9 @@ impl BvhNode {
         t_min: f32,
         t_max: f32,
     ) -> BvhNodeIndex {
-        // FIXME: Need to be able to do this in a loop instead of recursively because of stack overflowing
+        // FIXME: Need to be able to do this in a loop instead of recursively because of potential stack overflowing
         if low_index == high_index || low_index + 1 == high_index {
-            BvhNode::create_leaf_node(low_index, hitables, nodes, t_min, t_max)
+            BvhNode::create_leaf_node(low_index, hitables, nodes)
         } else {
             BvhNode::create_aggregate_node(low_index, high_index, hitables, nodes, t_min, t_max)
         }
@@ -372,14 +403,6 @@ fn arena_bbox_z_compare(box_1: &(usize, AABBVolume), box_2: &(usize, AABBVolume)
     box_1.1.min().z().partial_cmp(&box_2.1.min().z()).unwrap()
 }
 
-fn sort_entities(hitables: &mut [(usize, AABBVolume)]) {
-    match drand48() as u8 * 3 {
-        0 => hitables.sort_by(arena_bbox_x_compare),
-        1 => hitables.sort_by(arena_bbox_y_compare),
-        _ => hitables.sort_by(arena_bbox_z_compare),
-    };
-}
-
 #[derive(Debug)]
 pub struct Bvh {
     // TODO: Make the Bvh structure own the vec of entities within it - ???
@@ -393,7 +416,6 @@ pub struct Bvh {
 
 impl Bvh {
     pub fn new(entities: &Entities, t_min: f32, t_max: f32) -> Bvh {
-        use scene::HitableRef;
         let mut nodes = Vec::with_capacity(entities.len() * 2);
 
         // FIXME: Instead of effectively making a copy of the hitables list, sort the original Vec<Entity> (for mem/cache access/locality reasons)
@@ -419,26 +441,26 @@ impl Bvh {
     }
 
     // TODO: Implement an iterative version that won't be able to blow up the stack
-    fn hit_internal_ptr(
-        &self,
-        node_idx: BvhNodeIndex,
-        entities: &Entities,
-        ray: &Ray,
-        t_min: f32,
-        t_max: f32,
-        hit_record: &mut HitRecord,
+    fn hit_internal_ptr( &self,
+                         node_idx: BvhNodeIndex,
+                         entities: &Entities,
+                         ray: &Ray,
+                         inv_ray_dir: &Vec3,
+                         t_min: f32,
+                         t_max: f32,
+                         hit_record: &mut HitRecord,
     ) -> bool {
-        let node = &self.nodes[node_idx as usize];
+        let node: &BvhNode = &self.nodes[node_idx as usize];
 
-        if node.bbox.hit(ray, t_min, t_max) {
-//            println!("hit node: {} (is_geometry {})", node_idx, node.is_geometry_node());
+        if node.bbox.hit(ray._origin, *inv_ray_dir, t_min, t_max) {
             if node.is_geometry_node() {
                 return entities.get_hitable(node.geom_index() as usize).hit_ptr(entities, ray, t_min, t_max, hit_record);
-            } else if self.hit_internal_ptr(node.left, entities, ray, t_min, t_max, hit_record) {
+            } else if self.hit_internal_ptr(node.left, entities, ray, inv_ray_dir, t_min, t_max, hit_record) {
                 self.hit_internal_ptr(
                     node.right,
                     entities,
                     ray,
+                    inv_ray_dir,
                     t_min,
                     hit_record.t,
                     hit_record,
@@ -449,6 +471,7 @@ impl Bvh {
                     node.right,
                     entities,
                     ray,
+                    inv_ray_dir,
                     t_min,
                     t_max,
                     hit_record,
@@ -458,9 +481,11 @@ impl Bvh {
 
         false
     }
+}
 
-    pub fn hit(&self, entities: &Entities, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
-        self.hit_internal_ptr(0, entities, ray, t_min, t_max, hit_record)
+impl Accelerator for Bvh {
+    fn hit(&self, entities: &Entities, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
+        self.hit_internal_ptr(0, entities, ray, &ray.inverse_direction(), t_min, t_max, hit_record)
     }
 }
 

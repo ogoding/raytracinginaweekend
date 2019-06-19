@@ -8,9 +8,8 @@ pub static RAY_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 #[derive(Copy, Clone, Debug)]
 pub struct Ray {
-    origin: Vec3,
-    direction: Vec3,
-    inverse_direction: Vec3,
+    pub _origin: Vec3,
+    pub _direction: Vec3,
     time: f32,
 }
 
@@ -18,9 +17,8 @@ impl Ray {
     pub fn new(origin: Vec3, direction: Vec3, time: f32) -> Ray {
         RAY_COUNT.fetch_add(1, Ordering::Relaxed);
         Ray {
-            origin,
-            direction,
-            inverse_direction: direction.recip(),
+            _origin: origin,
+            _direction: direction,
             time,
         }
     }
@@ -28,19 +26,18 @@ impl Ray {
     pub fn zero() -> Ray {
         RAY_COUNT.fetch_add(1, Ordering::Relaxed);
         Ray {
-            origin: Vec3::zero(),
-            direction: Vec3::zero(),
-            inverse_direction: Vec3::zero(),
+            _origin: Vec3::zero(),
+            _direction: Vec3::zero(),
             time: 0.0,
         }
     }
 
     pub fn origin(&self) -> Vec3 {
-        self.origin
+        self._origin
     }
 
     pub fn direction(&self) -> Vec3 {
-        self.direction
+        self._direction
     }
 
     pub fn time(&self) -> f32 {
@@ -48,11 +45,11 @@ impl Ray {
     }
 
     pub fn inverse_direction(&self) -> Vec3 {
-        self.inverse_direction
+        self._direction.recip()
     }
 
     pub fn point_at_parameter(&self, t: f32) -> Vec3 {
-        self.origin + t * self.direction
+        self._origin + t * self._direction
     }
 }
 
@@ -61,8 +58,8 @@ impl fmt::Display for Ray {
         write!(
             f,
             "origin: {}, direction: {}",
-            self.origin(),
-            self.direction()
+            self._origin,
+            self._direction
         )
     }
 }

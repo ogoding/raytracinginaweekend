@@ -1,4 +1,3 @@
-use ray::Ray;
 use vec3::Vec3;
 
 #[inline]
@@ -37,9 +36,9 @@ pub fn surrounding_box(box0: AABBVolume, box1: AABBVolume) -> AABBVolume {
 // FIXME: Why does this result in fewer rays than previous approach?
 // Credit to Majercik et al. - http://jcgt.org/published/0007/03/04/
 #[inline(always)]
-fn slabs(aabb_min: Vec3, aabb_max: Vec3, ray_origin: Vec3, inv_ray_dir: Vec3) -> bool {
-    let t0 = (aabb_min - ray_origin) * inv_ray_dir;
-    let t1 = (aabb_max - ray_origin) * inv_ray_dir;
+fn slabs(aabb_min: Vec3, aabb_max: Vec3, ray_origin: Vec3, ray_inv_dir: Vec3) -> bool {
+    let t0 = (aabb_min - ray_origin) * ray_inv_dir;
+    let t1 = (aabb_max - ray_origin) * ray_inv_dir;
     let tmin = t0.min(&t1); // vector of element wise min
     let tmax = t0.max(&t1); // vector of element wise max
 
@@ -73,7 +72,7 @@ impl AABBVolume {
         self.max
     }
 
-    pub fn hit(&self, ray: &Ray, _t_min: f32, _t_max: f32) -> bool {
-        slabs(self.min, self.max, ray.origin(), ray.inverse_direction())
+    pub fn hit(&self, ray_origin: Vec3, ray_inv_dir: Vec3, _t_min: f32, _t_max: f32) -> bool {
+        slabs(self.min, self.max, ray_origin, ray_inv_dir)
     }
 }

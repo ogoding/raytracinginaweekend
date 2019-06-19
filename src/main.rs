@@ -1,7 +1,3 @@
-//#![feature(nll)]
-// Does this need to go somewhere else?
-//#![cfg_attr(test, feature(test))]
-
 // TODO: Move most of this stuff into a lib.rs?
 // TODO: run clippy and rustfmt
 
@@ -34,10 +30,11 @@ mod texture;
 mod transform;
 mod vec3;
 mod volume;
+mod linear_bvh;
 
-use bvh::{CompactBvh, Bvh};
+use bvh::{Accelerator, CompactBvh, Bvh};
 use hitable::HitRecord;
-use image::{Image, RGB, new_rgb};
+use image::{Image, RGB, vec_to_rgb};
 use random::drand48;
 use ray::{Ray, RAY_COUNT};
 use vec3::Vec3;
@@ -53,11 +50,12 @@ use scene::{Window, Scene, Resources};
 
 const MAX_RAY_DEPTH: u8 = 50;
 
-fn trace_ray(
+// TODO: Make a non-recursive trace_ray?
+
+fn trace_ray<A: Accelerator>(
     ray: &Ray,
     world: &Resources,
-    bvh: &Bvh,
-//    bvh: &CompactBvh,
+    bvh: &A,
     depth: u8,
 ) -> Vec3 {
     let mut hit_record = HitRecord::zero();
@@ -89,12 +87,11 @@ fn gamma(vec: Vec3) -> Vec3 {
     Vec3::new(vec.x().sqrt(), vec.y().sqrt(), vec.z().sqrt())
 }
 
-fn calculate_pixel(
+fn calculate_pixel<A: Accelerator>(
     index: usize,
     window: &Window,
     scene: &Scene,
-    bvh: &Bvh,
-//    bvh: &CompactBvh,
+    bvh: &A,
 ) -> RGB {
     let width = window.width as usize;
     let height = window.height as usize;
@@ -111,22 +108,20 @@ fn calculate_pixel(
     }
 
     colour = gamma(colour / window.samples as f32);
-
-//    RGB::new_scaled(colour.r(), colour.g(), colour.b())
-    new_rgb(colour.r(), colour.g(), colour.b())
+    vec_to_rgb(colour.r(), colour.g(), colour.b())
 }
 
 fn run() -> Result<(), String> {
-    let nx: usize = 400;
-    let ny: usize = 400;
+    let nx: usize = 600;
+    let ny: usize = 600;
     let ns: usize = 100;
 
-    let scene = "simple_light";
-//    let scene = "cornell_box";
+//    let scene = "simple_light";
+    let scene = "cornell_box";
 //    let scene = "final_scene";
-    let (mut scene, window) = load_scene(scene, nx as u32, ny as u32, ns as u32)?;
-//    let bvh = CompactBvh::new(&mut scene.resources.entities, 0.0, 1.0);
-    let bvh = Bvh::new(&mut scene.resources.entities, 0.0, 1.0);
+    let (scene, window) = load_scene(scene, nx as u32, ny as u32, ns as u32)?;
+    let bvh = Bvh::new(&scene.resources.entities, 0.0, 1.0);
+//    let bvh2 = CompactBvh::new(&mut scene.resources.entities, 0.0, 1.0);
 
     assert!(
         (scene.resources.materials.len() as u16) < u16::MAX,
@@ -140,24 +135,27 @@ fn run() -> Result<(), String> {
     // TODO: Implement a version of this that builds buffers of rays to process (maybe store as SoA?)
     // TODO: How to handle multiple types of Hitable object? Turn everything into meshes/triangles? How would spheres be done?
 
-    // TODO: Rewrite this range -> Image logic to allocate the image at the start and write into appropriate cells
-
-    // TODO: Work out whether rayon is adding any overhead
     // Is this the best way to do it? or is parallelism over sub images/tiles better?
-    let indexes: Vec<usize> = (0..nx * ny).collect();
-    let pixels: Vec<RGB> = indexes
-//    let pixels: Vec<RGB> = (0..nx * ny)
-//        .into_iter()
-        .into_par_iter()
-        .map(|idx| {
-            calculate_pixel(
-                idx,
-                &window,
-                &scene,
-                &bvh,
-            )
-        })
-        .collect();
+
+    let mut pixels: Vec<RGB> = vec![RGB{data: [0, 0, 0]}; nx * ny];
+    // Make each thread only process a row
+    pixels
+        .par_chunks_mut(nx)
+//        .chunks_mut(nx)
+        .enumerate()
+        .for_each(|(chunk_idx, chunk)| {
+            let chunk_idx = chunk_idx * nx;
+            for (idx, pixel) in chunk.iter_mut().enumerate() {
+                *pixel = calculate_pixel(chunk_idx + idx, &window, &scene, &bvh)
+            }
+        });
+//    pixels
+////        .iter_mut()
+//        .par_iter_mut()
+//        .enumerate()
+//        .for_each(|(idx, pixel)| {
+//            *pixel = calculate_pixel(idx, &window, &scene, &bvh)
+//        });
 
     let image = Image::from_vec(pixels, window.width, window.height);
 

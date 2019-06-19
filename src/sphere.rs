@@ -43,7 +43,7 @@ impl Sphere {
 }
 
 impl Hitable for Sphere {
-    fn hit_ptr(&self, entities: &Entities, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
+    fn hit_ptr(&self, _entities: &Entities, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
         let oc = ray.origin() - self.center;
         let ray_direction = ray.direction();
         let a = ray_direction.squared_length();
@@ -126,7 +126,7 @@ impl MovingSphere {
 }
 
 impl Hitable for MovingSphere {
-    fn hit_ptr(&self, entities: &Entities, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
+    fn hit_ptr(&self, _entities: &Entities, ray: &Ray, t_min: f32, t_max: f32, hit_record: &mut HitRecord) -> bool {
         let oc = ray.origin() - self.center(ray.time());
         let ray_direction = ray.direction();
         let a = ray_direction.squared_length();

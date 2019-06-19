@@ -1,12 +1,13 @@
-use aabb::{surrounding_box, AABBVolume};
+use aabb::AABBVolume;
+//use aabb::surrounding_box;
 use ray::Ray;
 use vec3::Vec3;
 
-use std::ops::Index;
+//use std::ops::Index;
 use std::fmt::Debug;
 use scene::{Entities, MaterialRef};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct HitRecord {
     // FIXME: Improve naming
     pub t: f32,
